@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     container_name: homepage
     ports:
-      - ${COMPOSE_PORT_HTTP:-3000}:3000
+      - ${COMPOSE_PORT_HTTP:-80}:3000
     volumes:
       - config:/app/config
       - icons:/app/public/icons
