@@ -1,0 +1,15 @@
+[user]
+	name = Jane Doe
+	email = jane@fdelab.lan
+[push]
+	default = matching
+[alias]
+	co = checkout
+	ci = commit
+	st = status
+	br = branch
+	type = cat-file -t
+	dump = cat-file -p
+	hist = log -n 25 --pretty=format:'%h %ad | %s%d [%an]' --graph --date=short
+	histall = log --pretty=format:'%h %ad | %s%d [%an]' --graph --date=short
+	sh = !git remote -v && git br -a --color=never && git stash list && git status && git hist
