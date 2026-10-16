@@ -1,0 +1,4 @@
+#!/bin/bash
+
+firewall-cmd --add-port=5380/tcp --permanent
+firewall-cmd --reload

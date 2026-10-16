@@ -1,0 +1,20 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    restart: unless-stopped
+    container_name: homepage
+    ports:
+      - ${COMPOSE_PORT_HTTP:-3000}:3000
+    volumes:
+      - config:/app/config
+      - icons:/app/public/icons
+      - /var/run/docker.sock:/var/run/docker.sock:ro # (optional) For docker integrations
+    environment:
+      # PORT: ${PORT:-3000}
+      HOMEPAGE_ALLOWED_HOSTS: ${HOMEPAGE_ALLOWED_HOSTS} # nostromo.lan:3000,phantom1.lan:3000,homepage.lan
+      HOMEPAGE_VAR_NAME: ${HOMEPAGE_VAR_NAME}
+
+volumes:
+    config:
+    icons:
+
