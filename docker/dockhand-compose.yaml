@@ -1,0 +1,17 @@
+services:
+  dockhand:
+    image: fnsys/dockhand:latest
+    container_name: dockhand
+    restart: unless-stopped
+    ports:
+      - ${COMPOSE_PORT_HTTP:-3000}:3000
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DISABLE_LOCAL_LOGIN: ${DISABLE_LOCAL_LOGIN:-false}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/docker:/docker
+      - dockhand:/app/data
+
+volumes:
+  dockhand:
