@@ -1,0 +1,6 @@
+#!/bin/bash
+
+dnf install -y qemu-guest-agent epel-release git
+
+cat packages.txt | xargs dnf install -y
+
