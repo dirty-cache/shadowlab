@@ -24,25 +24,25 @@ The local router IP will be 192.168.70.254
     * Click Upload and upload the file
 
 * Create a new VM, settings:
-    * General: Name=router, Start at boot=Enabled
+    * General: Name=router, Start at boot=Enabled (Enable Advanced to see this option)
     * OS: Do not use any media
     * System: machine=q35, Qemu agent: enabled
     * Disks: Create an 8GiB disk
     * CPU: 1 socket, 2 cores, Type=host
-    * Memory: 4 GiB (4096 MiB) (after install we may set it to 1GiB)
+    * Memory: 4 GiB (4096 MiB) (after install we may set it back to 1GiB)
     * Network: defaults
 
 * After creation:
     * Remove the CD Drive
-    * Add an extra network interface for the WAN. Set VLAN ID if needed
+    * Add an extra network interface for the WAN. Set VLAN Tag if needed
     * Import hard disk, select the OPNSense image
-    * Options: Set boot order to use scsi1 (the smallest image, 2.5 GB)
+    * Options: Set boot order to use scsi1 (the smallest image, 2.5 GB, this boots the installer)
 
 * First boot
     * Open the console for the VM and start it, wait for the login
     * Login as installer, password opnsense
     * Keymap: default (unless you have a non-USA keyboard)
-    * Install: Use Install (UFS) (Important! The default ZFS is not needed and requires much more memory)
+    * **Important!!** Use Install (UFS) (The default ZFS is not needed and requires much more memory)
     * Select disk: Choose the 8GiB disk (our target). This may be the first or second option
     * Wait for the installer to copy files (may take a few minutes, and sometimes it seems to hang. Just be patient)
     * When done, select Complete Install
@@ -69,24 +69,32 @@ The local router IP will be 192.168.70.254
     * Restore GUI access defaults: N (default)
 
 * First login
-    * OPNsense should now be reachable on the browser (from within the LAN). The URL is given on the console, and shows http://192.168.70.254
+    * OPNsense should now be reachable on the browser (from within the LAN). The URL is given on the console, and shows http://192.168.70.254. Ignore certificate warnings.
     * Login as root, password opnsense. A wizard will start.
-    * Hostname: router
-    * Domain: Whatever your domain is
-    * Timezone: Select your preferred TZ
-    * DNS Servers: Select 1.1.1.1
-    * Override DNS: Disable
-    * WAN: Leave it at DHCP or if the WAN network does not provide DHCP, set Type to Static and enter IP address/netmask (i.e. 192.168.60.254/24) and gateway IP (to whatever it is on the WAN)
-    * Block RFC1918: Disable
-    * Block Bogon: Enable
-    * LAN: Configure DHCP server: Disable
-    * Deployment type: Disable Automatic DHCP/DNS registration
-    * Initial password: Set a new password
-    * Click Apply, then Continue
+    * General Information
+        * Hostname: router
+        * Domain: fdelab.lan
+        * Timezone: Select your preferred timezone
+        * DNS Servers: Select 1.1.1.1
+        * Override DNS: Disable
+    * Network [WAN]
+        * Type: Leave it at DHCP or if the WAN network does not provide DHCP, set Type to Static and enter IP address/netmask (i.e. 192.168.60.254/24) and gateway IP (to whatever it is on the WAN)
+        * Block RFC1918: Disable
+        * Block Bogon: Enable
+    * Network [LAN]
+        * Disable LAN: Disabled
+        * IP Address: 192.168.70.254/24 (prefilled)
+        * Configure DHCP Server: Disable
+    * Deployment 
+        * Automatic DHCP/DNS registration: Disable
+    * Initial password
+        * Set a new password
+    * Click Apply, then Continue to the dashboard
 
 * Further setup
-    * System - Firmware: Select Status, click Updates
-    * If WAN connectivity works, you get a long list of updates. Scroll to the bottom and click Update
+    * System - Firmware
+        * Select Status, click Check for updates
+        * If WAN connectivity works, you get a long list of updates. Scroll to the bottom and click Update
     * After reboot, login again
     * Go back to Firmware, and select Plugins
     * Click to view the community Plugins

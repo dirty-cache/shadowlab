@@ -3,8 +3,7 @@
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 test -x /usr/bin/dnf || die "Not an RPM based host"
 
-#remote="$1"
-#gitdir=$(git rev-parse --show-toplevel)
+gitdir=$(git rev-parse --show-toplevel)
 
 cp $gitdir/contrib/docker-ce-stable.repo /etc/yum.repos.d/
 

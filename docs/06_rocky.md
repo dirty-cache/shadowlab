@@ -51,7 +51,7 @@ We assume there is no DHCP/DNS server (yet) on the network, so we will manually 
     * Root password: Enter a password, enable Allow root SSH login with password
 
 * Click Begin Installation
-* After completion, click Reboot
+* After completion, click Reboot System
 * On the console there should be a login prompt.
 * Login with root and your password
 * If networking is setup correctly, you can also login from a jumphost using ssh
@@ -60,5 +60,6 @@ We assume there is no DHCP/DNS server (yet) on the network, so we will manually 
 
 ## Post Install
 
+* Hardware - CD/DVD Drive: Set to Don't use any media
 * Clone the bootstrap repo on the host as root: ```git clone <TBD>```
 * Run ```setup-rocky``` on the host

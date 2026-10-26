@@ -1,6 +1,5 @@
 # Setting up Tailscale
 
-
 ## Description
 
 We are going to create a Tailscale network to manage our private FDE lab.
@@ -16,7 +15,11 @@ We will use a dedicated desktop to manage our lab environment. Ideally this is a
 
 ## Initial setup
 
-* Login to [Tailscale](https://login.tailscale.com/login) (On a regular browser - primary desktop or from the VM)
+* Login to [Tailscale](https://login.tailscale.com/login) (On a regular browser  primary desktop or from the VM)
+
+## Tailscale Admin
+
+* Check if you have Tailscale access and can see the Network - Machines page. There should be no machines yet on the first login
 
 ## Connecting the VM
 
