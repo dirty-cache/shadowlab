@@ -1,6 +1,7 @@
 atop
 autofs
 bash-completion
+bind-utils
 bzip2
 dnf-automatic
 dstat

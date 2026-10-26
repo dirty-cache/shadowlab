@@ -3,13 +3,11 @@
 #test -x /usr/bin/dnf || exit 10
 
 remote="$1"
+gitdir=$(git rev-parse --show-toplevel)
 
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 
 ssh -o BatchMode=yes -o ConnectTimeout=5 root@$remote exit || die "Connect failed"
-
-gitdir=$(git rev-parse --show-toplevel)
-
 scp $gitdir/contrib/docker-ce-stable.repo root@$remote:/etc/yum.repos.d/
 
 cat <<- EOF | ssh root@$remote
