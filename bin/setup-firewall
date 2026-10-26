@@ -1,15 +1,12 @@
 #!/bin/bash
 
-test -x /usr/bin/dnf || exit 10
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/bin/dnf || die "Not an RPM based host"
 
 firewall-cmd --add-service=http --permanent
+firewall-cmd --add-service=https --permanent
 firewall-cmd --add-service=dhcp --permanent
 firewall-cmd --add-service=dns --permanent
 firewall-cmd --add-port=5380/tcp --permanent
-firewall-cmd --reload
 
-# set this
-: << EOF
-1.1.1.1:853
-1.0.0.1:853
-EOF
+firewall-cmd --reload

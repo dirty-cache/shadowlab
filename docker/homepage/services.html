@@ -1,0 +1,57 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/services/
+
+- My First Group:
+    - Homepage:
+        icon: homepage.png
+        href: http://homepage.fdelab.lan
+        siteMonitor: http://homepage.fdelab.lan
+        description: Nice homepage
+
+    - Proxmox Server:
+        href: https://proxmox.fdelab.lan
+        icon: proxmox
+        ping: pve.fdelab.lan
+        description: Virtual Environment
+
+    - Technitium:
+        icon: technitium.png
+        href: https://technitium.fdelab.lan
+        siteMonitor: http://technitium.fdelab.lan
+        description: DNS/DHCP Server
+
+    - Dockhand:
+        icon: dockhand.png
+        href: http://dockhand.fdelab.lan
+        siteMonitor: http://dockhand.fdelab.lan
+        description: Docker Management
+
+    - OPNSense:
+        icon: opnsense.png
+        href: http://router.fdelab.lan
+        ping: router.fdelab.lan
+        description: Router/Firewall
+
+- Fallback:
+    - Proxmox:
+        icon: proxmox
+        href: https://192.168.70.1:8006
+        description: Proxmox (IP) 
+    - OPNSense:
+        icon: opnsense.png
+        href: http://192.168.70.254
+        description: Router/Firewall
+    - Dockhand:
+        icon: dockhand.png
+        href: http://192.168.70.2:3000
+        description: Docker Management
+    - Technitium:
+        icon: technitium.png
+        href: http://192.168.70.2:5380
+        description: DNS/DHCP Server
+
+- My Third Group:
+    - My Third Service:
+        href: http://localhost/
+        description: Homepage is 😎

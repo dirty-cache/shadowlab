@@ -1,16 +1,14 @@
 #!/bin/bash
 
-#test -x /usr/bin/dnf || exit 10
-
-remote="$1"
-gitdir=$(git rev-parse --show-toplevel)
-
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/bin/dnf || die "Not an RPM based host"
 
-ssh -o BatchMode=yes -o ConnectTimeout=5 root@$remote exit || die "Connect failed"
-scp $gitdir/contrib/docker-ce-stable.repo root@$remote:/etc/yum.repos.d/
+#remote="$1"
+#gitdir=$(git rev-parse --show-toplevel)
 
-cat <<- EOF | ssh root@$remote
+cp $gitdir/contrib/docker-ce-stable.repo /etc/yum.repos.d/
+
 dnf -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 systemctl enable --now docker
-EOF
+
+ln -sf /var/lib/docker/volumes /volumes
