@@ -57,3 +57,8 @@ We assume there is no DHCP/DNS server (yet) on the network, so we will manually 
 * If networking is setup correctly, you can also login from a jumphost using ssh
 * run ```dnf update```. Enter Y to install the updates. Enter Y if it asks to approve the Rocky GPG key. This may take a few minutes.
 * Reboot: ```reboot``` or ```shutdown -r now```
+
+## Post Install
+
+* Clone the bootstrap repo on the host as root: ```git clone <TBD>```
+* Run ```setup-rocky``` on the host
