@@ -9,10 +9,8 @@ services:
       - config:/app/config
       - icons:/app/public/icons
       - /var/run/docker.sock:/var/run/docker.sock:ro # (optional) For docker integrations
-    environment:
-      # PORT: ${PORT:-3000}
-      HOMEPAGE_ALLOWED_HOSTS: ${HOMEPAGE_ALLOWED_HOSTS} # nostromo.lan:3000,phantom1.lan:3000,homepage.lan
-      HOMEPAGE_VAR_NAME: ${HOMEPAGE_VAR_NAME}
+    env_file:
+      - homepage.env
 
 volumes:
     config:
