@@ -18,9 +18,9 @@ On first login, change the password. The username is Admin.
         * These settings make Technitium use encrypted DNS requests  to Cloudflare.
 
 * Zones
-    * We create our primary zone fdelab.lan
+    * We create our primary zone shadowlab.lan
         * Click Add Zone
-        * Zone: fdelab.lan
+        * Zone: shadowlab.lan
         * Type: Primary Zone
         * Zone Serial: Enabled (just my preference)
     * We add records for our hosts:
@@ -30,10 +30,10 @@ On first login, change the password. The username is Admin.
         * Add reverse record: Enabled
         * Create reverse zone: Enabled (for the first host only)
     * Add A (Address) records for:
-        * router.fdelab.lan 192.168.70.254
-        * mgt.fdelab.lan 192.168.70.2
-        * proxy.fdelab.lan 192.168.70.3
+        * router.shadowlab.lan 192.168.70.254
+        * mgt.shadowlab.lan 192.168.70.2
+        * proxy.shadowlab.lan 192.168.70.3
     * Add CNAME (Alias) record for homepage:
         * Name: homepage
         * Type: CNAME
-        * Domain name: mgt.fdelab.lan
+        * Domain name: mgt.shadowlab.lan

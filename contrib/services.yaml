@@ -5,32 +5,32 @@
 - My First Group:
     - Homepage:
         icon: homepage.png
-        href: http://homepage.fdelab.lan
-        siteMonitor: http://homepage.fdelab.lan
+        href: http://homepage.shadowlab.lan
+        siteMonitor: http://homepage.shadowlab.lan
         description: Nice homepage
 
     - Proxmox Server:
-        href: https://proxmox.fdelab.lan
+        href: https://proxmox.shadowlab.lan
         icon: proxmox
-        ping: pve.fdelab.lan
+        ping: pve.shadowlab.lan
         description: Virtual Environment
 
     - Technitium:
         icon: technitium.png
-        href: https://technitium.fdelab.lan
-        siteMonitor: http://technitium.fdelab.lan
+        href: https://technitium.shadowlab.lan
+        siteMonitor: http://technitium.shadowlab.lan
         description: DNS/DHCP Server
 
     - Dockhand:
         icon: dockhand.png
-        href: http://dockhand.fdelab.lan
-        siteMonitor: http://dockhand.fdelab.lan
+        href: http://dockhand.shadowlab.lan
+        siteMonitor: http://dockhand.shadowlab.lan
         description: Docker Management
 
     - OPNSense:
         icon: opnsense.png
-        href: http://router.fdelab.lan
-        ping: router.fdelab.lan
+        href: http://router.shadowlab.lan
+        ping: router.shadowlab.lan
         description: Router/Firewall
 
 - Fallback:

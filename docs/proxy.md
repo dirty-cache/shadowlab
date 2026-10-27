@@ -43,7 +43,7 @@ For the proxy to work best, it needs a separate network interface. In proxmox, a
 
     * Real servers: Add an entry for Homepage
         * Name: homepage
-        * FQDN: mgt.fdelab.lan
+        * FQDN: mgt.shadowlab.lan
         * Port: 3001
 
     * Virtual services - Backend pools: Add an entry for homepage
@@ -53,7 +53,7 @@ For the proxy to work best, it needs a separate network interface. In proxmox, a
     * Rules & Checks - Conditions: Add a condition
         * Name: homepage
         * Condition type: hdr (HTTP Host Header matches)
-        * Host string: homepage.fdelab.lan
+        * Host string: homepage.shadowlab.lan
     
     * Rules & Checks - Rules: Add a rule
         * Name: homepage

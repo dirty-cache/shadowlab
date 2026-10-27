@@ -73,7 +73,7 @@ The local router IP will be 192.168.70.254
     * Login as root, password opnsense. A wizard will start.
     * General Information
         * Hostname: router
-        * Domain: fdelab.lan
+        * Domain: shadowlab.lan
         * Timezone: Select your preferred timezone
         * DNS Servers: Select 1.1.1.1
         * Override DNS: Disable
@@ -117,4 +117,44 @@ The local router IP will be 192.168.70.254
     * Click on the 3 dots for the node and choose Edit Route Settings
     * Enable the subnet and set Use as exit node
 
+## Blocking
+
+If our upstream WAN is part of a network that we shoud not have access to (i.e., corporate network), we can block access such that only outgoing connections to the internet are allowed. This is optional but some customers may require it.
+
+For this, we are going to set up a rule that blocks all outgoing non-internet traffic. This means all private IP addresses as defined in RFC1918 [Wiki](https://en.wikipedia.org/wiki/Private_network).
+
+However, we need to allow traffic on our local network. So we add an extra rule to only allow our local LAN.
+
+The order of firewall rules is important, and OPNSense processes them top to bottom. So the Allow LAN rule should be the first, followed by the Block private rule. We are going to create the rules first, then place them in the right order.
+
+* Firewall - Aliases
+    * Create a new alias
+    * Name: RFC1918_Nets
+    * Type: Network(s)
+    * Content: 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12 (one per line)
+
+* Firewall - Rules
+    * Create a new rule
+    * Description: Block private networks
+    * Interface (rule): LAN
+    * Action: Reject
+    * Destination: RFC1918_Nets
+
+    * Create a new rule
+    * Description: Allow LAN
+    * Interface (rule): LAN
+    * Action: Pass
+    * Destination: LAN Network
+
+* Firewall - Rules
+    * Checkmark the Allow LAN rule
+    * On the first rule, click the left arrow. The Allow LAN should now be on top.
+    * Checkmark the Block Private rule
+    * On the rule (2nd line), click the left arrow
+    * Click Apply
+
+The order now should be:
+1. Allow LAN
+2. Block Private
+3. & 4: Default allow LAN to any (regular and IPv6).
 

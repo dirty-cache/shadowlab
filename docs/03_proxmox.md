@@ -28,7 +28,7 @@ We will install the Proxmox hypervisor on a bare metal machine to run all of our
 * Settings
     * Country: Select your preferred country/region
     * Password and email: Set password, change email to mail@example.local
-    * Network: Select correct nic. Hostname=pve.fdelab.lan, IP=192.168.70.1/24, gateway=192.168.70.254, dns=192.168.70.254
+    * Network: Select correct nic. Hostname=pve.shadowlab.lan, IP=192.168.70.1/24, gateway=192.168.70.254, dns=192.168.70.254
 * Install and wait for the reboot
 * The console login should show, with the login url (https://192.168.70.1:8006/)
 

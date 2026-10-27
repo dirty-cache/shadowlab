@@ -45,7 +45,7 @@ We assume there is no DHCP/DNS server (yet) on the network, so we will manually 
     * Method: Manual
     * Add an IP address: 192.168.70.2, mask 24, gateway 192.168.70.254
     * DNS Servers: 192.168.70.254 (for now we will use the DNS from OPNSense)
-    * Search domain: fdelab.lan
+    * Search domain: shadowlab.lan
     * Select tab IPv6 Settings, set to Ignore
     * Click Save, Done
     * Root password: Enter a password, enable Allow root SSH login with password
