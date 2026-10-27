@@ -1,0 +1,48 @@
+#!/bin/bash
+#============================================================================
+# Title       : destroy-os
+# Description : Wipe the start of /dev/sda and power off (lab teardown)
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-08-06
+# ---------------------------------------------------------------------------
+
+set -euo pipefail
+
+die() { echo "$(basename "$0"): [die] $*" >&2 ; exit 1 ; }
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") -f|--force
+
+  -f, --force   Required. Confirm wiping /dev/sda and powering off.
+  -h, --help    Show this help
+
+Without -f/--force the script refuses to run.
+EOF
+}
+
+wipe_disk() {
+  dd if=/dev/zero of=/dev/sda bs=1M count=1000
+  poweroff
+}
+
+# --- getopt / entry point ---------------------------------------------------
+
+OPTS=$(getopt -o hf --long help,force -n "$(basename "$0")" -- "$@") || exit 1
+eval set -- "$OPTS"
+
+force=0
+
+while true; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    -f|--force) force=1; shift ;;
+    --) shift; break ;;
+    *) die "internal getopt error" ;;
+  esac
+done
+
+[[ $# -eq 0 ]] || die "unexpected arguments: $*"
+[[ "${force}" -eq 1 ]] || { usage >&2; die "refusing to wipe disk without -f/--force"; }
+
+wipe_disk

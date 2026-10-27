@@ -1,0 +1,25 @@
+#!/bin/bash
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/sbin/qm || die "qm not found"
+
+DISK_STORAGE=local-lvm
+BRIDGE=vmbr0
+
+vmid=$(pvesh get /cluster/nextid)
+
+qm create "$vmid" \
+    --name "$1" \
+    --onboot 1 \
+    --ostype l26 \
+    --machine q35 \
+    --agent enabled=1 \
+    --cpu host \
+    --sockets 1 \
+    --cores 2 \
+    --memory 4096 \
+    --scsihw virtio-scsi-single \
+    --scsi0 "${DISK_STORAGE}:32" \
+    --ide2 "none,media=cdrom" \
+    --boot "order=scsi0;ide2" \
+    --net0 "virtio,bridge=${BRIDGE}"

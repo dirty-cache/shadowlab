@@ -9,14 +9,14 @@ We can also block or limit outgoing traffic, and use it as a web proxy.
 ## Requirements
 
 * Proxmox server up and running
-* Proxmox connected to both local LAN and WAN (i.e. via VLAN or separate Ethernet interface)
+* Proxmox connected to both local LAN and WAN (i.e. via VLAN or separate network interface)
 * Tailscale or Headscale network pre-configured
 
 We assume the local LAN is 192.168.70.0/24 and the WAN is 192.168.60.0/24
 
 The local router IP will be 192.168.70.254
 
-## Proxmox
+## Proxmox VM
 * Download [OPNSense disk image 26.7](https://pkg.opnsense.org/releases/26.7/OPNsense-26.7-dvd-amd64.iso.bz2)
 * Extract the image (Name should be ending with .iso)
     * The script download-images will do this for you and put the ISO image in ./iso
@@ -34,7 +34,7 @@ The local router IP will be 192.168.70.254
     * Network: defaults
 
 * After creation:
-    * Add an extra network interface for the WAN. Set VLAN Tag if needed
+    * Add an extra network interface for the WAN. Set VLAN Tag if needed for WAN (internet) access
 
 * First boot
     * Open the console for the VM and start it, wait for the login
@@ -44,7 +44,7 @@ The local router IP will be 192.168.70.254
     * Select disk: Choose the 8GiB disk (our target). This may be the first or second option
     * Wait for the installer to copy files (may take a few minutes, and sometimes it seems to hang. Just be patient)
     * When done, select Complete Install
-    * Select Halt Now
+    * Select Halt Now. Wait for the system to be powered off.
 
 * Initial setup
     * Hardware - CD/DVD Drive: Set to Don't use any media
@@ -67,7 +67,7 @@ The local router IP will be 192.168.70.254
     * Restore GUI access defaults: N (default)
 
 * First login
-    * OPNsense should now be reachable on the browser (from within the LAN). The URL is given on the console, and shows http://192.168.70.254. Ignore certificate warnings.
+    * OPNsense should now be reachable on the browser (from within the LAN). The URL is given on the console, and shows https://192.168.70.254. Ignore certificate warnings.
     * Login as root, password opnsense. A wizard will start.
     * General Information
         * Hostname: router
@@ -76,7 +76,7 @@ The local router IP will be 192.168.70.254
         * DNS Servers: Select 1.1.1.1
         * Override DNS: Disable
     * Network [WAN]
-        * Type: Leave it at DHCP or if the WAN network does not provide DHCP, set Type to Static and enter IP address/netmask (i.e. 192.168.60.254/24) and gateway IP (to whatever it is on the WAN)
+        * Type: Leave it at DHCP or, if the WAN network does not provide DHCP, set Type to Static and enter IP address/netmask (i.e. 192.168.60.254/24) and gateway IP (to whatever it is on the WAN)
         * Block RFC1918: Enable
         * Block Bogon: Enable
     * Network [LAN]
@@ -89,6 +89,7 @@ The local router IP will be 192.168.70.254
     * Initial password
         * Set a new password
     * Click Apply, then Continue to the dashboard
+    * At this point, your local network has access to the internet via the router
 
 * Further setup
     * System - Firmware
@@ -100,6 +101,16 @@ The local router IP will be 192.168.70.254
     * Install os-qemu-guest-agent, os-tailscale and os-haproxy
 
 * Setting up Tailscale
+    * Connecting via Tailscale
+        * VPN - Tailscale - Authentication
+        * Apply
+
+    * Connecting via Headscale (self hosted)
+        * VPN - Tailscale - Authentication
+        * Enter the headscale URL
+        * Apply
+
+
     * Generate a pre-authentication key on Tailscale or Headscale
     * Go to VPN - Tailscale and select Settings
     * Set Enabled, click Apply
@@ -107,6 +118,7 @@ The local router IP will be 192.168.70.254
     * Enable Advanced Mode (to view the pre-auth field)
     * For Headscale, enter the Headscale URL
     * Enter the pre-auth key and click Apply
+
     * Tailscale - Status: Should show a Tailscale IP and no errors
     * Go to Tailscale - Settings
     * Accept DNS: Disable, Advertise Exit Node: Enable, click Apply

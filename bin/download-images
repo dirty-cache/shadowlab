@@ -5,3 +5,4 @@ gitdir=$(git rev-parse --show-toplevel)
 
 test -f $gitdir/iso/proxmox-ve_9.2-1.iso || curl https://enterprise.proxmox.com/iso/proxmox-ve_9.2-1.iso -o $gitdir/iso/proxmox-ve_9.2-1.iso
 test -f $gitdir/iso/OPNsense-26.7-dvd-amd64.iso || curl https://pkg.opnsense.org/releases/26.7/OPNsense-26.7-dvd-amd64.iso.bz2 -o $gitdir/iso/OPNsense-26.7-dvd-amd64.iso.bz2
+test -f $gitdir/iso/Rocky-9.8-x86_64-minimal.iso || curl https://download.rockylinux.org/pub/rocky/9/isos/x86_64/Rocky-9.8-x86_64-minimal.iso -o $gitdir/iso/Rocky-9.8-x86_64-minimal.iso

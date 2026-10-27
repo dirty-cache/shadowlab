@@ -5,7 +5,9 @@ test -x /usr/bin/dnf || die "Not an RPM based host"
 
 gitdir=$(git rev-parse --show-toplevel)
 
+dnf update -y
 dnf install -y qemu-guest-agent epel-release git
 
 cat $gitdir/contrib/packages.txt | xargs dnf install -y
 
+echo reboot now
