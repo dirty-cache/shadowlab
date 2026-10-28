@@ -1,0 +1,13 @@
+#!/bin/bash
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
+gitdir=$(git rev-parse --show-toplevel)
+oemdisk=$gitdir/iso/opnsense.img
+
+dd if=/dev/zero of=$oemdisk bs=1M count=8
+mkfs.vfat -n OEMDRV $oemdisk
+sudo mkdir -p /mnt/oemdrv
+sudo mount -o loop $oemdisk /mnt/oemdrv
+sudo cp $gitdir/config/kickstart.cfg /mnt/oemdrv/ks.cfg
+sudo umount /mnt/oemdrv

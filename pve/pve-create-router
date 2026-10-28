@@ -9,7 +9,7 @@ BRIDGE=vmbr0
 vmid=$(pvesh get /cluster/nextid)
 
 qm create "$vmid" \
-    --name "$1" \
+    --name "router" \
     --onboot 1 \
     --ostype l26 \
     --machine q35 \
@@ -19,7 +19,10 @@ qm create "$vmid" \
     --cores 2 \
     --memory 4096 \
     --scsihw virtio-scsi-single \
-    --scsi0 "${DISK_STORAGE}:32" \
-    --ide2 "none,media=cdrom" \
+    --scsi0 "${DISK_STORAGE}:8" \
+    --ide2 "local:iso/OPNsense-26.7-dvd-amd64.iso,media=cdrom" \
     --boot "order=scsi0;ide2" \
-    --net0 "virtio,bridge=${BRIDGE}"
+    --net0 "virtio,bridge=${BRIDGE}" \
+    --net1 "virtio,bridge=${BRIDGE}"
+
+qm start $vmid

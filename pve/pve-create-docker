@@ -1,0 +1,32 @@
+#!/bin/bash
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/sbin/qm || die "qm not found"
+
+DISK_STORAGE=local-lvm
+BRIDGE=vmbr0
+
+vmid=$(pvesh get /cluster/nextid)
+
+qm create "$vmid" \
+    --name "docker" \
+    --onboot 1 \
+    --ostype l26 \
+    --machine q35 \
+    --agent enabled=1 \
+    --cpu host \
+    --sockets 1 \
+    --cores 2 \
+    --memory 4096 \
+    --scsihw virtio-scsi-single \
+    --scsi0 "${DISK_STORAGE}:32" \
+    --scsi1 "${DISK_STORAGE}:0,import-from=local:import/kickstart.img.raw" \
+    --ide2 "local:iso/Rocky-9.8-x86_64-minimal.iso,media=cdrom" \
+    --boot "order=scsi0;ide2" \
+    --net0 "virtio,bridge=${BRIDGE}"
+
+qm start $vmid
+
+#qm disk import "$VMID" "OPNsense-${VER}-nano-amd64.img" "$STORAGE"
+#qm disk import "$vmid" /var/lib/vz/import/oemdrv.img.raw local-lvm --target-disk scsi1
+#qm set "$vmid" --scsi1 local-lvm:vm-"$vmid"-disk-1

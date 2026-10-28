@@ -6,3 +6,4 @@ test -x /usr/sbin/qm || die "qm not found"
 vmid=$(qm list | awk '$2=="router" {print $1}')
 
 qm set $vmid --ide2 none,media=cdrom
+qm set $vmid --memory 1024
