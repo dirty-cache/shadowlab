@@ -85,7 +85,7 @@ The local router IP will be 192.168.70.254
         * Configure DHCP Server: Disable
     * Deployment type
         * Optimize for multi-WAN: Disable
-        * Automatic DHCP/DNS registration: Enable
+        * Automatic DHCP/DNS registration: Disable
     * Initial password
         * Set a new password
     * Click Apply, then Continue to the dashboard
