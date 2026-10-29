@@ -42,7 +42,8 @@
 - Shadowlab Services:
     - Forgejo:
         icon: forgejo.png
-        href: https://forgejo.adm.shadowlab.lan
+        href: https://forgejo.shadowlab.lan
+        siteMonitor: https://forgejo.shadowlab.lan
         description: Git Repositories
 
     - LiteLLM:
