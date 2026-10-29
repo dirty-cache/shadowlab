@@ -10,28 +10,46 @@
         description: Nice homepage
 
     - Proxmox Server:
-        href: https://proxmox.shadowlab.lan
+        href: https://proxmox.adm.shadowlab.lan
         icon: proxmox
         ping: pve.shadowlab.lan
         description: Virtual Environment
 
+    - Authentik:
+        href: https://authentik.adm.shadowlab.lan
+        siteMonitor: https://authentik.adm.shadowlab.lan
+        icon: authentik.png
+        description: Single Sign-On
+
     - Technitium:
         icon: technitium.png
-        href: https://technitium.app.shadowlab.lan
-        siteMonitor: http://technitium.app.shadowlab.lan
+        href: https://technitium.adm.shadowlab.lan
+        siteMonitor: http://technitium.adm.shadowlab.lan
         description: DNS/DHCP Server
 
     - Dockhand:
         icon: dockhand.png
-        href: http://dockhand.shadowlab.lan
-        siteMonitor: http://dockhand.app.shadowlab.lan
+        href: https://dockhand.adm.shadowlab.lan
+        siteMonitor: http://dockhand.adm.shadowlab.lan
         description: Docker Management
 
     - OPNSense:
         icon: opnsense.png
-        href: http://router.shadowlab.lan
+        href: https://router.shadowlab.lan
         ping: router.shadowlab.lan
         description: Router/Firewall
+
+- Shadowlab Services:
+    - Forgejo:
+        icon: forgejo.png
+        href: https://forgejo.adm.shadowlab.lan
+        description: Git Repositories
+
+    - LiteLLM:
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/litellm.png
+        href: https://litellm.adm.shadowlab.lan/
+        siteMonitor: https://litellm.adm.homelab.lan/
+        description: LLM Gateway
 
 - Shadowlab Fallback:
     - Proxmox:

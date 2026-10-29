@@ -4,7 +4,7 @@ networks:
 
 services:
   server:
-    image: codeberg.org/forgejo/forgejo:14
+    image: codeberg.org/forgejo/forgejo:17
     container_name: forgejo
     environment:
       - USER_UID=1000
@@ -18,8 +18,8 @@ services:
       # /usr/local/etc/dirty_cache_root_ca.crt:/usr/local/share/ca-certificates/atc-root-ca.crt:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - '${HTTP_LISTEN_IP}:443:3000'
-      - '${SSH_LISTEN_IP}:22:22'
+      - '192.168.70.4:443:3000'
+      - '192.168.70.4:22:22'
     # update cert:
     # docker exec forgejo exec /usr/sbin/update-ca-certificates
 
