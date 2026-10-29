@@ -24,13 +24,13 @@
     - Technitium:
         icon: technitium.png
         href: https://technitium.adm.shadowlab.lan
-        siteMonitor: http://technitium.adm.shadowlab.lan
+        siteMonitor: https://technitium.adm.shadowlab.lan
         description: DNS/DHCP Server
 
     - Dockhand:
         icon: dockhand.png
         href: https://dockhand.adm.shadowlab.lan
-        siteMonitor: http://dockhand.adm.shadowlab.lan
+        siteMonitor: https://dockhand.adm.shadowlab.lan
         description: Docker Management
 
     - OPNSense:
@@ -55,11 +55,13 @@
     - Proxmox:
         icon: proxmox
         href: https://192.168.70.1:8006
+        ping: 192.168.70.1
         description: Proxmox (IP) 
     - OPNSense:
         icon: opnsense.png
         href: http://192.168.70.254
         description: Router/Firewall
+        ping: 192.168.70.254
     - Dockhand:
         icon: dockhand.png
         href: http://192.168.70.2:3000
