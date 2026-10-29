@@ -1,0 +1,58 @@
+services:
+  server:
+    command: server
+    env_file:
+     - .env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: ${AUTHENTIK_POSTGRESQL__HOST}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRESQL__NAME}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRESQL__PASSWORD}
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRESQL__USER}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.2}
+    ports:
+    - ${COMPOSE_PORT_HTTP:-9000}:9000
+    - ${COMPOSE_PORT_HTTPS:-9443}:9443
+    restart: unless-stopped
+    shm_size: 512mb
+    volumes:
+    - data:/data
+    - templates:/templates
+    - /usr/local/etc/dirty_cache_root_ca.crt:/usr/local/share/ca-certificates/dirty-cache-root-ca.crt:ro
+  worker:
+    command: worker
+    env_file:
+    - .env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: ${AUTHENTIK_POSTGRESQL__HOST}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRESQL__NAME}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRESQL__PASSWORD}
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRESQL__USER}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.2}
+    restart: unless-stopped
+    shm_size: 512mb
+    user: root
+    volumes:
+    - data:/data
+    - certs:/certs
+    - templates:/templates
+    # /var/run/docker.sock:/var/run/docker.sock
+
+  ldap:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/ldap}:${AUTHENTIK_TAG:-2026.5.2}
+    environment:
+      AUTHENTIK_HOST: ${AUTHENTIK_HOST}
+      # AUTHENTIK_HOST: http://authentik-server:9000
+      AUTHENTIK_INSECURE: "false"
+      AUTHENTIK_TOKEN: kMkOX13s4wPulTSs8by0SZtKPN0gZyGv08Y3zmMGNUAxK4DgQZIA2dKClQfN
+    volumes:
+      - /usr/local/etc/dirty_cache_root_ca.crt:/etc/ssl/certs/my-root-ca.crt:ro
+    ports:
+      - "389:3389"
+      - "636:6636"
+
+volumes:
+  data:
+  certs:
+  templates:

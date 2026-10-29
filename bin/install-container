@@ -1,0 +1,14 @@
+#!/bin/bash
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/bin/dnf || die "Not an RPM based host"
+
+gitdir=$(git rev-parse --show-toplevel)
+
+name=$1
+
+test -f /opt/docker/$name && die "Compose file already exists!"
+cp -pr $gitdir/docker/$name /opt/docker/
+
+cd /opt/docker/$name && docker compose up -d
+

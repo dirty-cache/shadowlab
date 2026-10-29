@@ -1,0 +1,14 @@
+#!/bin/bash
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/bin/dnf || die "Not an RPM based host"
+
+gitdir=$(git rev-parse --show-toplevel)
+
+dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+dnf config-manager --set-disabled pgdg14
+dnf config-manager --set-disabled pgdg15
+dnf config-manager --set-disabled pgdg16
+dnf config-manager --set-disabled pgdg17
+dnf install postgresql18-server
+dnf install postgresql18-contrib
