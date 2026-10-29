@@ -9,8 +9,8 @@ flowchart RL
   internet[Internet]
   wan["WAN 192.168.60.0/24"]
   subgraph proxmox ["Proxmox pve.shadowlab.lan 192.168.70.1"]
-    opnsense["OPNsense router.shadowlab.lan<br/>LAN 192.168.70.254<br/>WAN DHCP or 192.168.60.254/24<br/>Proxy NIC 192.168.70.3 proxy.shadowlab.lan HAProxy<br/>Tailscale exit node advertises 192.168.70.0/24"]
-    mgt["Management mgt.shadowlab.lan 192.168.70.2<br/>Rocky Linux and Docker<br/>Technitium DNS/DHCP, Dockhand, Homepage"]
+    opnsense["OPNsense Router<br/>LAN 192.168.70.254<br/>WAN DHCP or 192.168.60.254/24<br/>Proxy NIC 192.168.70.3 HAProxy<br/>Tailscale exit node"]
+    mgt["Management mgt.shadowlab.lan 192.168.70.2<br/>Rocky Linux and Docker<br/>Technitium DNS/DHCP, Containers"]
   end
   lan["LAN 192.168.70.0/24 shadowlab.lan"]
   bootstrap[Bootstrap desktop initial setup only]
