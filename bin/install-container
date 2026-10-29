@@ -7,8 +7,9 @@ gitdir=$(git rev-parse --show-toplevel)
 
 name=$1
 
-test -f /opt/docker/$name && die "Compose file already exists!"
+test -d /opt/docker/$name && die "Compose file already exists!"
 cp -pr $gitdir/docker/$name /opt/docker/
 
 cd /opt/docker/$name && docker compose up -d
 
+test -x /opt/docker/$name/postinstall && /opt/docker/$name/postinstall

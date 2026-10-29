@@ -10,4 +10,6 @@ cp $gitdir/contrib/docker-ce-stable.repo /etc/yum.repos.d/
 dnf -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 systemctl enable --now docker
 
+mkdir /opt/docker
+
 ln -sf /var/lib/docker/volumes /volumes
