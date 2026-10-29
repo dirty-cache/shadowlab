@@ -24,6 +24,6 @@ flowchart RL
   wannic --- opnsense
   opnsense --- lannic
   lannic --- lan
-  mgt --- lan
+  mgt --- lannic
   bootstrap --- lan
 ```
