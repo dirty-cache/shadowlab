@@ -3,8 +3,6 @@
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 test -x /usr/bin/dnf || die "Not an RPM based host"
 
-gitdir=$(git rev-parse --show-toplevel)
-
 test -d /var/lib/docker/volumes/homepage_config/_data/ || die "Homepage data volume not found"
 
 cp -pr /opt/docker/homepage/{services,settings}.yaml /var/lib/docker/volumes/homepage_config/_data
