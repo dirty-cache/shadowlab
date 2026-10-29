@@ -7,6 +7,7 @@ nic1: ""
 nic2: ""
 storage: local-lvm
 iso: Rocky-9.8-x86_64-minimal.iso
+# Optional imported disk under local:import/. Omit to skip the second disk.
 oemdisk: kickstart.img.raw
 disk_gb: 32
 memory: 4096

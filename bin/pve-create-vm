@@ -150,6 +150,9 @@ def create_vm(api, name, cfg):
         "ide2": f"local:iso/{cfg['iso']},media=cdrom",
         "boot": "order=scsi0;ide2",
     }
+    oemdisk = str(cfg.get("oemdisk") or "").strip()
+    if oemdisk:
+        payload["scsi1"] = f"{storage}:0,import-from=local:import/{oemdisk}"
     for index in (0, 1, 2):
         bridge = str(cfg.get(f"nic{index}") or "").strip()
         if index == 0 and not bridge:
@@ -175,6 +178,8 @@ def vm_config_path(config, name):
     path = config if config.is_absolute() else CONFIG_DIR / config
     if path.is_dir():
         return path / f"{name}.yaml"
+    if path.suffix.lower() != ".yaml":
+        path = path.with_name(path.name + ".yaml")
     return path
 
 

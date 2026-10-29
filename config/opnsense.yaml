@@ -6,7 +6,7 @@ nic1: vmbr1
 nic2: vmbr0
 storage: local-lvm
 iso: OPNsense-26.7-dvd-amd64.iso
-oemdisk: config.img.raw
+#oemdisk: config.img.raw
 disk_gb: 8
 memory: 4096
 cores: 2
