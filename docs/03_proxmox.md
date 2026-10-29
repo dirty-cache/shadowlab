@@ -29,6 +29,7 @@ We will install the Proxmox hypervisor on a bare metal machine to run all of our
     * Country: Select your preferred country/region
     * Password and email: Set password, change email to mail@example.local
     * Network: Select correct nic. Hostname=pve.shadowlab.lan, IP=192.168.70.1/24, gateway=192.168.70.254, dns=192.168.70.254
+    * Note: if 2 or more NICs are connected, Proxmox may suggest to use the Uplink (WAN) interface as primary IP address. Select the other NIC (the one on the private LAN)
 * Install and wait for the reboot
 * The console login should show, with the login url (https://192.168.70.1:8006/)
 
@@ -38,6 +39,15 @@ We will install the Proxmox hypervisor on a bare metal machine to run all of our
 * Login as root with your given password
 
 ## Setup
+
+* If using a separate NIC for WAN uplink, create a bridge for this
+    * Select host pve
+    * Select System - Network
+    * Click Create, select Linux Bridge
+    * Name: vmbr1
+    * Bridge ports: nic1 (or whatever the name is of the WAN interface)
+    * Do NOT assign an IP address
+    * Apply Configuration
 
 * Updates
     * In the Server view, select the server (pve) and go to Updates - Repositories
@@ -50,8 +60,21 @@ We will install the Proxmox hypervisor on a bare metal machine to run all of our
     * Expand Datacenter - pve and select local (pve)
     * Click ISO Images - Upload
     * Upload the Rocky 9.8 minimal ISO image
-    * Click Import - Upload
-    * Upload the OPNSense image (.raw extension)
+    * Click ISO Images - Upload
+    * Upload the OPNSense ISO image
+
+* Creating API key for remote management
+    * In this repo, copy config/pve.yaml.example to pve.yaml
+    * This allows our scripts to create and manage VMs from the Linux shell
+    * Click Datacenter
+    * Select Permissions - API Tokens
+    * Add token:
+        * user: root@pam
+        * token ID: shadowlab
+        * Privilege Separation: Disable
+    * Copy/paste the token into the pve.yaml file (token_secret)
+
+    
 
 Further steps: Install and configure OPNSense
 

@@ -6,6 +6,8 @@ Overview of the Shadow Lab Network settings
 
 In our lab we assume the private LAN is 192.168.70.0/24. The domain is shadowlab.lan
 
+See the [network diagram](diagram.md) for how these systems connect.
+
 ## IP Addresses
 
 | System  	 | IP Address      | FQDN              | Notes | Del |
