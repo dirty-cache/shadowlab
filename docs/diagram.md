@@ -5,7 +5,7 @@ Topology of the Shadow Lab: an isolated LAN, a WAN uplink, and remote access thr
 The WAN prefix `192.168.60.0/24` is the example from the OPNsense setup and may differ per site.
 
 ```mermaid
-flowchart LR
+flowchart RL
   internet[Internet]
   wan["WAN 192.168.60.0/24"]
   subgraph proxmox ["Proxmox pve.shadowlab.lan 192.168.70.1"]
