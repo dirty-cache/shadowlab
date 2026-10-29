@@ -3,6 +3,16 @@
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 test -x /usr/bin/dnf || die "Not an RPM based host"
 
+gitdir=$(git rev-parse --show-toplevel)
+
+cp -pr $gitdir/docker /opt/docker
+
+cd /opt/docker/dockhand && docker compose up -d
+cd /opt/docker/dns && docker compose up -d
+cd /opt/docker/homepage && docker compose up -d
+
+cp $gitdir/contrib/{services,settings}.yaml /var/lib/docker/volumes/homepage_config/_data/
+
 firewall-cmd --add-service=http --permanent
 firewall-cmd --add-service=https --permanent
 firewall-cmd --add-service=dhcp --permanent

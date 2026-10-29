@@ -25,7 +25,7 @@
       <authorizedkeys/>
       <otp_seed/>
       <shell/>
-      <password>$2y$11$ytg9MYDX7ST4eAPWbVwVKO12wI7CiiuKGfYiLUtAud/KKuUpAkfKu</password>
+      <password></password>
       <pwd_changed_at/>
       <landing_page/>
       <comment/>
@@ -1051,10 +1051,6 @@
           </subnet4>
         </subnets>
       </settings>
-      <authentication version="0.0.0" persisted_at="1793107688.05" description="Tailscale authentication settings">
-        <loginServer>https://headscale.dirty-cache.com</loginServer>
-        <preAuthKey/>
-      </authentication>
     </tailscale>
   </OPNsense>
   <revision>

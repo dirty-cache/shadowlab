@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""
+Author: Bart Sjerps
+Last modified: 2026-10-29
+Purpose: Create a Proxmox VM from a YAML config.
+"""
+
+import argparse
+import logging
+import sys
+import time
+from urllib.parse import quote
+from pathlib import Path
+import urllib3
+
+import requests
+import yaml
+
+ROOT = Path(__file__).resolve().parent.parent
+CONFIG_DIR = ROOT / "config"
+CREDENTIALS = CONFIG_DIR / "pve.yaml"
+VM_EXAMPLE = CONFIG_DIR / "name.yaml.example"
+TASK_TIMEOUT = 600
+
+log = logging.getLogger("pve-create-vm")
+
+
+def load_config(path, hint=""):
+    """Load a YAML mapping. hint is appended when the file is missing."""
+    if not path.is_file():
+        raise SystemExit(f"config not found: {path}.{hint}")
+    with path.open() as handle:
+        data = yaml.safe_load(handle) or {}
+    if not isinstance(data, dict):
+        raise SystemExit(f"config must be a mapping: {path}")
+    return data
+
+
+def load_vm_config(path):
+    """Load VM settings from a YAML file."""
+    hint = f" Copy {VM_EXAMPLE} to {path}." if VM_EXAMPLE.is_file() else ""
+    return load_config(path, hint)
+
+
+class Proxmox:
+    """Small Proxmox VE API client (token or password auth)."""
+
+    def __init__(self, cfg):
+        host = cfg.get("host")
+        if not host:
+            raise SystemExit("config host is required")
+        port = cfg.get("port", 8006)
+        self.base = f"https://{host}:{port}/api2/json"
+        self.session = requests.Session()
+        self.session.verify = bool(cfg.get("verify_ssl", False))
+        self.csrf = None
+        self.node = (cfg.get("node") or "").strip() or None
+        self._authenticate(cfg)
+        if not self.node:
+            self.node = self._online_node()
+
+    def _authenticate(self, cfg):
+        user = cfg.get("user") or "root@pam"
+        token_name = (cfg.get("token_name") or "").strip()
+        token_secret = (cfg.get("token_secret") or "").strip()
+        password = cfg.get("password") or ""
+        if token_secret:
+            if not token_name:
+                raise SystemExit("config token_name is required when token_secret is set")
+            self.session.headers["Authorization"] = f"PVEAPIToken={user}!{token_name}={token_secret}"
+            return
+        if not password:
+            raise SystemExit("config needs token_secret or password")
+        data = self._request("POST", "access/ticket", data={"username": user, "password": password}, auth=False)
+        self.session.cookies.set("PVEAuthCookie", data["ticket"])
+        self.csrf = data["CSRFPreventionToken"]
+
+    def _online_node(self):
+        nodes = self.get("nodes")
+        online = [item["node"] for item in nodes if item.get("status") == "online"]
+        if not online:
+            raise SystemExit("no online Proxmox node found")
+        return online[0]
+
+    def _request(self, method, path, *, data=None, params=None, auth=True):
+        headers = {}
+        if auth and method != "GET" and self.csrf:
+            headers["CSRFPreventionToken"] = self.csrf
+        url = f"{self.base}/{path.lstrip('/')}"
+        try:
+            response = self.session.request(method, url, data=data, params=params, headers=headers, timeout=(10, 120))
+        except requests.RequestException as exc:
+            raise SystemExit(f"Proxmox API request failed: {exc}") from exc
+        try:
+            body = response.json()
+        except ValueError:
+            body = {}
+        if response.ok and "errors" not in body:
+            return body.get("data")
+        detail = body.get("errors") or body.get("message") or response.text.strip() or response.reason
+        raise SystemExit(f"Proxmox API {response.status_code} {method} {path}: {detail}")
+
+    def get(self, path, **params):
+        return self._request("GET", path, params=params or None)
+
+    def post(self, path, payload):
+        return self._request("POST", path, data=payload)
+
+    def wait_task(self, upid):
+        """Block until a UPID task stops. Raises SystemExit on failure or timeout."""
+        encoded = quote(upid, safe="")
+        deadline = time.monotonic() + TASK_TIMEOUT
+        while time.monotonic() < deadline:
+            status = self.get(f"nodes/{self.node}/tasks/{encoded}/status")
+            if status.get("status") == "stopped":
+                exitstatus = status.get("exitstatus")
+                if exitstatus != "OK":
+                    raise SystemExit(f"Proxmox task failed: {exitstatus}")
+                return
+            time.sleep(2)
+        raise SystemExit(f"timed out after {TASK_TIMEOUT}s waiting for {upid}")
+
+
+def vm_exists(api, name):
+    resources = api.get("cluster/resources", type="vm") or []
+    return any(item.get("type") == "qemu" and item.get("name") == name for item in resources)
+
+
+def create_vm(api, name, cfg):
+    """Allocate the next VMID and create the VM from config/<name>.yaml."""
+    if vm_exists(api, name):
+        raise SystemExit(f"VM {name} already exists")
+    storage = cfg["storage"]
+    vmid = str(api.get("cluster/nextid"))
+    log.info("creating VM %s (id %s) on node %s", name, vmid, api.node)
+    payload = {
+        "vmid": vmid,
+        "name": name,
+        "onboot": 1,
+        "ostype": "l26",
+        "machine": "q35",
+        "agent": "enabled=1",
+        "cpu": "host",
+        "sockets": cfg["sockets"],
+        "cores": cfg["cores"],
+        "memory": cfg["memory"],
+        "scsihw": "virtio-scsi-single",
+        "scsi0": f"{storage}:{cfg['disk_gb']}",
+        "scsi1": f"{storage}:0,import-from=local:import/{cfg['oemdisk']}",
+        "ide2": f"local:iso/{cfg['iso']},media=cdrom",
+        "boot": "order=scsi0;ide2",
+    }
+    for index in (0, 1, 2):
+        bridge = str(cfg.get(f"nic{index}") or "").strip()
+        if index == 0 and not bridge:
+            raise SystemExit("config nic0 is required")
+        if bridge:
+            payload[f"net{index}"] = f"virtio,bridge={bridge}"
+    result = api.post(f"nodes/{api.node}/qemu", payload)
+    if isinstance(result, str) and result.startswith("UPID:"):
+        log.info("waiting for disk import")
+        api.wait_task(result)
+    return vmid
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Create a Proxmox VM from a YAML config.")
+    parser.add_argument("name", help="VM name")
+    parser.add_argument("-c", "--config", type=Path, default=CONFIG_DIR, help="VM settings YAML, relative to the config directory (default: <name>.yaml in %(default)s)")
+    return parser.parse_args()
+
+
+def vm_config_path(config, name):
+    """Resolve the VM YAML. Relative paths are inside the config directory."""
+    path = config if config.is_absolute() else CONFIG_DIR / config
+    if path.is_dir():
+        return path / f"{name}.yaml"
+    return path
+
+
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    args = parse_args()
+    config_path = vm_config_path(args.config, args.name)
+    vm = load_vm_config(config_path)
+    cfg = load_config(CREDENTIALS, " Copy pve.yaml.example to pve.yaml.")
+    if not cfg.get("verify_ssl", False):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        log.warning("TLS certificate verification is disabled")
+    api = Proxmox(cfg)
+    vmid = create_vm(api, args.name, vm)
+    log.info("created VM %s id %s (not started)", args.name, vmid)
+    print(vmid)
+
+
+if __name__ == "__main__":
+    sys.exit(main() or 0)

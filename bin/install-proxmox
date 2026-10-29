@@ -1,8 +1,0 @@
-#!/bin/bash
-
-die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
-
-gitdir=$(git rev-parse --show-toplevel)
-
-scp $gitdir/pve/* root@192.168.70.1:/usr/local/bin
-

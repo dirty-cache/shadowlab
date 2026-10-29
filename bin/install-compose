@@ -1,8 +1,0 @@
-#!/bin/bash
-
-die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
-test -x /usr/bin/dnf || die "Not an RPM based host"
-
-gitdir=$(git rev-parse --show-toplevel)
-
-cp -pr $gitdir/docker /opt/docker

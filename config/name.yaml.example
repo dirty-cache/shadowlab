@@ -1,0 +1,14 @@
+# Copy to config/<vmname>.yaml. The filename (without .yaml) is the Proxmox VM name.
+# Proxmox credentials stay in config/pve.yaml.
+
+# Each value is a bridge name. nic0 is required. Leave nic1 or nic2 empty to skip.
+nic0: vmbr0
+nic1: ""
+nic2: ""
+storage: local-lvm
+iso: Rocky-9.8-x86_64-minimal.iso
+oemdisk: kickstart.img.raw
+disk_gb: 32
+memory: 4096
+cores: 2
+sockets: 1

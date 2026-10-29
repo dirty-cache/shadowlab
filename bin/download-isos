@@ -1,4 +1,10 @@
 #!/bin/bash
+#============================================================================
+# Title       : download-isos
+# Description : Download the ISO images required for Shadowlab install
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-28
+# ---------------------------------------------------------------------------
 
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 gitdir=$(git rev-parse --show-toplevel)

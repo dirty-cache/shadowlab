@@ -1,0 +1,15 @@
+# Copy to config/pve.yaml and fill in credentials.
+# config/pve.yaml is gitignored.
+
+host: 192.168.70.1
+port: 8006
+verify_ssl: false
+
+# API token (preferred). Leave token_secret empty to authenticate with password.
+user: root@pam
+token_name: shadowlab
+token_secret: ""
+password: ""
+
+# Empty node uses the first online cluster node.
+node: ""

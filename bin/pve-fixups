@@ -1,0 +1,7 @@
+
+
+qm set $vmid --ide2 none,media=cdrom
+
+qm set $vmid --delete scsi1
+qm set $vmid --delete unused0
+qm set $vmid --memory 1024

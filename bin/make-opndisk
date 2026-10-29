@@ -5,9 +5,29 @@ die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 gitdir=$(git rev-parse --show-toplevel)
 oemdisk=$gitdir/iso/opnsense.img
 
-dd if=/dev/zero of=$oemdisk bs=1M count=8
-mkfs.vfat -n OEMDRV $oemdisk
+dd if=/dev/zero of=$oemdisk bs=1M count=10
+mkfs.fat -n OPNSENSE $oemdisk
 sudo mkdir -p /mnt/oemdrv
 sudo mount -o loop $oemdisk /mnt/oemdrv
-sudo cp $gitdir/config/kickstart.cfg /mnt/oemdrv/ks.cfg
+sudo mkdir /mnt/oemdrv/conf
+sudo cp $gitdir/config/config-router.xml /mnt/oemdrv/conf/config.xml
+sudo ls -alR /mnt/oemdrv
 sudo umount /mnt/oemdrv
+
+rm -rf /mnt/cfg
+mkdir /mnt/cfg
+
+truncate -s 64M config.img
+parted -s config.img mklabel msdos
+parted -s config.img mkpart primary fat32 1MiB 100%
+LOOP=$(losetup -f --show -P config.img)
+mkfs.vfat -F 32 "${LOOP}p1"
+mount -o loop ${LOOP}p1 /mnt/cfg
+mount
+mkdir -p /mnt/cfg/conf
+cp ~bart/fdelab/shadowlab/config/config-router.xml /mnt/cfg/conf/config.xml
+
+find /mnt/cfg
+
+umount /mnt/cfg
+losetup -d "$LOOP"
