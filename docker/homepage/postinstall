@@ -7,4 +7,4 @@ gitdir=$(git rev-parse --show-toplevel)
 
 test -d /var/lib/docker/volumes/homepage_config/_data/ || die "Homepage data volume not found"
 
-cp -pr $gitdir/docker/homepage/{services,settings}.yaml /var/lib/docker/volumes/homepage_config/_data
+cp -pr /opt/docker/homepage/{services,settings}.yaml /var/lib/docker/volumes/homepage_config/_data
