@@ -22,6 +22,7 @@ rsync
 screen
 sssd
 sssd-ldap
+sqlite
 sudo
 sysstat
 tar

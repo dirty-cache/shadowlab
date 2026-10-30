@@ -15,10 +15,9 @@ services:
       - forgejo
     volumes:
       - data:/data
-      # /usr/local/etc/dirty_cache_root_ca.crt:/usr/local/share/ca-certificates/atc-root-ca.crt:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - '192.168.70.4:443:3000'
+      - '4000:3000'
       - '192.168.70.4:22:22'
     # update cert:
     # docker exec forgejo exec /usr/sbin/update-ca-certificates
