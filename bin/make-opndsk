@@ -1,0 +1,13 @@
+#!/bin/bash
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
+gitdir=$(git rev-parse --show-toplevel)
+
+mkdir -p $gitdir/tmp/conf-image/conf
+cp $gitdir/config/opnsense/opnsense.xml $gitdir/tmp/conf-image/conf/config.xml
+cd $gitdir/tmp
+ls -al
+genisoimage -allow-lowercase -o $gitdir/iso/opnsense-config.iso conf-image/
+
+ls -altr $gitdir/iso

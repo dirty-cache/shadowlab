@@ -194,7 +194,6 @@ def main():
     api = Proxmox(cfg)
     vmid = create_vm(api, args.name, vm)
     log.info("created VM %s id %s (not started)", args.name, vmid)
-    print(vmid)
 
 
 if __name__ == "__main__":

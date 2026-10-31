@@ -1,3 +1,4 @@
 iso/*
+tmp/*
 config/pve.yaml
 __pycache__/
