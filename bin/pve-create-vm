@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Bart Sjerps
-Last modified: 2026-10-29
+Last modified: 2026-10-31
 Purpose: Create a Proxmox VM from a YAML config.
 """
 
@@ -146,7 +146,6 @@ def create_vm(api, name, cfg):
         "memory": cfg["memory"],
         "scsihw": "virtio-scsi-single",
         "scsi0": f"{storage}:{cfg['disk_gb']},serial=boot",
-        "scsi1": f"{storage}:0,import-from=local:import/{cfg['oemdisk']}",
         "ide2": f"local:iso/{cfg['iso']},media=cdrom",
         "boot": "order=scsi0;ide2",
     }
