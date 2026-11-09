@@ -1,4 +1,4 @@
-# Copy to config/<vmname>.yaml. The filename (without .yaml) is the Proxmox VM name.
+# Copy to config/vms/<vmname>.yaml. The filename (without .yaml) is the Proxmox VM name.
 # Proxmox credentials stay in config/pve.yaml.
 
 nic0: vmbr0

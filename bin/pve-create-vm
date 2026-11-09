@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Bart Sjerps
-Last modified: 2026-10-31
+Last modified: 2026-11-09
 Purpose: Create a Proxmox VM from a YAML config.
 """
 
@@ -18,8 +18,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = ROOT / "config"
+VM_DIR = CONFIG_DIR / "vms"
 CREDENTIALS = CONFIG_DIR / "pve.yaml"
-VM_EXAMPLE = CONFIG_DIR / "name.yaml.example"
+VM_EXAMPLE = VM_DIR / "name.yaml.example"
 TASK_TIMEOUT = 600
 
 log = logging.getLogger("pve-create-vm")
@@ -127,7 +128,7 @@ def vm_exists(api, name):
 
 
 def create_vm(api, name, cfg):
-    """Allocate the next VMID and create the VM from config/<name>.yaml."""
+    """Allocate the next VMID and create the VM from config/vms/<name>.yaml."""
     if vm_exists(api, name):
         raise SystemExit(f"VM {name} already exists")
     storage = cfg["storage"]
@@ -168,13 +169,13 @@ def create_vm(api, name, cfg):
 def parse_args():
     parser = argparse.ArgumentParser(description="Create a Proxmox VM from a YAML config.")
     parser.add_argument("name", help="VM name")
-    parser.add_argument("-c", "--config", type=Path, default=CONFIG_DIR, help="VM settings YAML, relative to the config directory (default: <name>.yaml in %(default)s)")
+    parser.add_argument("-c", "--config", type=Path, default=VM_DIR, help="VM settings YAML, relative to config/vms (default: <name>.yaml in %(default)s)")
     return parser.parse_args()
 
 
 def vm_config_path(config, name):
-    """Resolve the VM YAML. Relative paths are inside the config directory."""
-    path = config if config.is_absolute() else CONFIG_DIR / config
+    """Resolve the VM YAML. Relative paths are inside config/vms."""
+    path = config if config.is_absolute() else VM_DIR / config
     if path.is_dir():
         return path / f"{name}.yaml"
     if path.suffix.lower() != ".yaml":
