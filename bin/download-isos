@@ -13,6 +13,8 @@ ISO_PROXMOX=proxmox-ve_9.2-1.iso
 ISO_OPNSENSE=OPNsense-26.7-dvd-amd64.iso
 ISO_ROCKY=Rocky-9.8-x86_64-minimal.iso
 
+test -d $gitdir/iso || mkdir $gitdir/iso
+
 echo Downloading ISO images...
 
 test -f $gitdir/iso/$ISO_PROXMOX  || curl https://enterprise.proxmox.com/iso/$ISO_PROXMOX -o $gitdir/iso/$ISO_PROXMOX
