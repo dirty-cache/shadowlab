@@ -1,0 +1,8 @@
+{
+    "ipaddr": "192.168.70.254",
+    "proxyaddr": "192.168.70.3",
+    "hostname": "router",
+    "domain": "shadowlab.lan",
+    "timezone": "Europe/Amsterdam",
+    "subnet": "192.168.70.0/24"
+}
