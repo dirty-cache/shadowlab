@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""
+Author: Bart Sjerps
+Last modified: 2026-11-09
+Purpose: Fill the OPNsense config template and build the config ISO.
+"""
+
+import argparse
+import json
+import logging
+import re
+import subprocess
+import sys
+from pathlib import Path
+from xml.sax.saxutils import escape
+
+ROOT = Path(__file__).resolve().parent.parent
+CONFIG = ROOT / "config" / "opnsense"
+STAGING = ROOT / "tmp" / "conf-image"
+PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_.-]*)\}")
+
+log = logging.getLogger("make-opnconfig")
+
+
+def load_settings(path):
+    """Return placeholder names mapped to text values from settings.json."""
+    if not path.is_file() or path.stat().st_size == 0:
+        raise SystemExit(f"settings file is missing or empty: {path}")
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"invalid settings JSON {path}: {exc}") from exc
+    if not isinstance(data, dict) or not data:
+        raise SystemExit(f"settings JSON must be a non-empty object: {path}")
+
+    values = {}
+    for name, value in data.items():
+        if not isinstance(value, str):
+            raise SystemExit(f"setting {name} must be a string")
+        values[name] = value.strip()
+    return values
+
+
+def fill_template(template, values):
+    """Replace {name} placeholders. XML-escape values. Fail if any name is unset."""
+    missing = []
+
+    def replace(match):
+        name = match.group(1)
+        if name not in values:
+            missing.append(name)
+            return match.group(0)
+        return escape(values[name])
+
+    rendered = PLACEHOLDER.sub(replace, template)
+    if missing:
+        names = ", ".join(sorted(set(missing)))
+        raise SystemExit(f"settings missing for placeholder(s): {names}")
+    return rendered
+
+
+def write_iso(config_xml, iso_path):
+    """Stage conf/config.xml and build the OPNsense config ISO with genisoimage."""
+    conf_dir = STAGING / "conf"
+    conf_dir.mkdir(parents=True, exist_ok=True)
+    iso_path.parent.mkdir(parents=True, exist_ok=True)
+    (conf_dir / "config.xml").write_text(config_xml)
+    command = ["genisoimage", "-allow-lowercase", "-o", str(iso_path), "conf-image"]
+    try:
+        subprocess.run(command, cwd=STAGING.parent, check=True)
+    except FileNotFoundError:
+        raise SystemExit("genisoimage not found")
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(f"genisoimage failed ({exc.returncode})")
+    log.info("wrote %s", iso_path)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Fill the OPNsense config template and build the config ISO.")
+    parser.add_argument("--template", type=Path, default=CONFIG / "opnsense-template.xml", help="template XML (default: %(default)s)")
+    parser.add_argument("--settings", type=Path, default=CONFIG / "settings.json", help="settings JSON (default: %(default)s)")
+    parser.add_argument("--output", type=Path, default=CONFIG / "opnsense.xml", help="output config (default: %(default)s)")
+    parser.add_argument("--iso", type=Path, default=ROOT / "iso" / "opnsense-config.iso", help="output ISO (default: %(default)s)")
+    return parser.parse_args()
+
+
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    args = parse_args()
+    if not args.template.is_file():
+        raise SystemExit(f"template not found: {args.template}")
+
+    values = load_settings(args.settings)
+    template = args.template.read_text()
+    rendered = fill_template(template, values)
+    if not rendered.endswith("\n"):
+        rendered += "\n"
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(rendered)
+    log.info("wrote %s (%d settings)", args.output, len(values))
+    write_iso(rendered, args.iso)
+
+
+if __name__ == "__main__":
+    sys.exit(main() or 0)

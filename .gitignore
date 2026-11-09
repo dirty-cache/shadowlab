@@ -1,5 +1,7 @@
 iso/*
 tmp/*
 config/pve.yaml
+config/opnsense/settings.json
+config/opnsense/opnsense.xml
 config/opnsense_apikey*.txt
 __pycache__/
