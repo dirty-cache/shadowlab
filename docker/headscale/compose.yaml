@@ -1,0 +1,41 @@
+services:
+  headscale:
+    image: docker.io/headscale/headscale:latest
+    restart: unless-stopped
+    container_name: headscale
+    read_only: true
+    tmpfs:
+      - /var/run/headscale
+    ports:
+      - "0.0.0.0:8080:8080"
+      - "0.0.0.0:9090:9090"
+      - "0.0.0.0:3478:3478/udp"
+    volumes:
+      # Please set <HEADSCALE_PATH> to the absolute path
+      # of the previously created headscale directory.
+      - /etc/headscale/config:/etc/headscale:ro
+      - /etc/headscale/lib:/var/lib/headscale
+    command: serve
+    healthcheck:
+        test: ["CMD", "headscale", "health"]
+
+  headplane:
+    image: ghcr.io/tale/headplane:latest
+    container_name: headplane
+    restart: unless-stopped
+    ports:
+      - "${COMPOSE_PORT_HTTP}:3000"
+    volumes:
+      - data:/var/lib/headplane
+      - /proc:/proc:ro
+      - /etc/headscale/config:/etc/headscale
+      - /etc/headplane/config.yaml:/etc/headplane/config.yaml:ro
+    healthcheck:
+      test: [ "CMD", "/bin/hp_healthcheck" ]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+volumes:
+    data:
