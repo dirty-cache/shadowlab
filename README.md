@@ -20,7 +20,10 @@ The Shadow Lab is built on free (mostly Open Source) tools for management.
 * Proxmox - to run Virtual Machines
 * OPNSense - virtual firewall/router
 * Tailscale Client - to provide secure VPN connectivity
+* Rocky Linux 9 - Linux OS
 * Docker - to run containers
+* Technitium DNS - DNS/DHCP server
+* Dockhand - Docker container manager
 
 ## Getting started
 
