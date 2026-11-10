@@ -4,11 +4,6 @@ technitium_url: http://192.168.70.2
 technitium_port: 5380
 technitium_validate_certs: true
 
-technitium_username: admin
-# Factory password. After the first run the API token is technitium_api_token in ansible/group_vars/technitium.yml.
-technitium_password: admin
-technitium_token_name: shadowlab-init
-
 # Settings > Proxy & Forwarders. DNS-over-TLS to Cloudflare.
 technitium_forwarders:
   - "1.1.1.1:853"
@@ -39,6 +34,10 @@ technitium_records:
   - name: homepage
     type: CNAME
     target: mgt.shadowlab.lan
+  # Relative to shadowlab.lan, so this is *.adm.shadowlab.lan.
+  - name: "*.adm"
+    type: CNAME
+    target: proxy.shadowlab.lan
 
 # Replaces the factory DHCP scope on 192.168.1.0/24.
 # Pool .101-.200 leaves the static hosts (.1, .2, .3, .254) outside the range.

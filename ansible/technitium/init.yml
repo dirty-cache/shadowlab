@@ -1,14 +1,13 @@
 ---
-# Initialize Technitium after the container is up.
+# Set DNS-over-TLS forwarders after the container is up.
 #
 #   ansible-galaxy collection install -r ansible/technitium/requirements.yml
 #   ansible-playbook ansible/technitium/init.yml
 #
-# Copy ansible/group_vars/technitium.yml.example to technitium.yml first and set
-# technitium_new_password. The first run changes the default admin password, writes
-# technitium_api_token into that file, then sets the DNS-over-TLS forwarders.
+# Log in to the web console first, create an API token, and put it in
+# technitium_api_token in ansible/group_vars/technitium.yml.
 # Zones and records are ansible/technitium/zones.yml.
-# Later runs read the token from group_vars. api_url must not include the port.
+# api_url must not include the port; the collection appends it.
 
 - name: Initialize Technitium DNS
   hosts: localhost
@@ -18,93 +17,15 @@
     - defaults.yml
 
   tasks:
-    - name: Check the Technitium API
-      ansible.builtin.uri:
-        url: "{{ technitium_url }}:{{ technitium_port }}/api/status"
-        return_content: true
-      register: technitium_status
-
     - name: Load the API token
       ansible.builtin.include_tasks: tasks/load_token.yml
 
-    - name: Create an API token when none is saved
+    - name: API token is required
+      ansible.builtin.fail:
+        msg: >-
+          No Technitium API token. Create one in the web console and set
+          technitium_api_token in ansible/group_vars/technitium.yml.
       when: technitium_token is not defined
-      block:
-        - name: Require a new admin password on a fresh install
-          ansible.builtin.assert:
-            quiet: true
-            that:
-              - technitium_new_password | default('') | length > 0
-            fail_msg: >-
-              Technitium still has the default admin password.
-              Set technitium_new_password in ansible/group_vars/technitium.yml.
-          when: technitium_status.json.hasDefaultCredentials | bool
-
-        - name: Log in
-          effectivelywild.technitium_dns.technitium_dns_login:
-            api_url: "{{ technitium_url }}"
-            api_port: "{{ technitium_port }}"
-            validate_certs: "{{ technitium_validate_certs }}"
-            username: "{{ technitium_username }}"
-            password: "{{ technitium_password }}"
-            include_info: false
-          register: technitium_login
-          no_log: true
-
-        - name: Change the default admin password
-          effectivelywild.technitium_dns.technitium_dns_change_password:
-            api_url: "{{ technitium_url }}"
-            api_port: "{{ technitium_port }}"
-            validate_certs: "{{ technitium_validate_certs }}"
-            api_token: "{{ technitium_login.token }}"
-            pass: "{{ technitium_password }}"
-            newPass: "{{ technitium_new_password | default('') }}"
-          when: technitium_status.json.hasDefaultCredentials | bool
-          no_log: true
-
-        - name: Log in again with the new password
-          effectivelywild.technitium_dns.technitium_dns_login:
-            api_url: "{{ technitium_url }}"
-            api_port: "{{ technitium_port }}"
-            validate_certs: "{{ technitium_validate_certs }}"
-            username: "{{ technitium_username }}"
-            password: "{{ technitium_new_password | default('') }}"
-            include_info: false
-          register: technitium_relogin
-          when: technitium_status.json.hasDefaultCredentials | bool
-          no_log: true
-
-        - name: Create a non-expiring API token
-          effectivelywild.technitium_dns.technitium_dns_create_token:
-            api_url: "{{ technitium_url }}"
-            api_port: "{{ technitium_port }}"
-            validate_certs: "{{ technitium_validate_certs }}"
-            api_token: "{{ technitium_relogin.token if technitium_relogin is defined else technitium_login.token }}"
-            user: "{{ technitium_username }}"
-            tokenName: "{{ technitium_token_name }}"
-            return_token: true
-          register: technitium_created
-          no_log: true
-
-        - name: Saved token is missing but the named token already exists
-          ansible.builtin.fail:
-            msg: >-
-              API token '{{ technitium_token_name }}' already exists on the server,
-              and technitium_api_token in ansible/group_vars/technitium.yml is empty.
-              Delete that session in the Technitium console, or paste the token into that file.
-          when: not technitium_created.changed
-
-        - name: Remember the new API token
-          ansible.builtin.set_fact:
-            technitium_token: "{{ technitium_created.api_response.response.token }}"
-          no_log: true
-
-        - name: Save the API token into group vars
-          ansible.builtin.replace:
-            path: "{{ playbook_dir }}/../group_vars/technitium.yml"
-            regexp: '^technitium_api_token:.*$'
-            replace: 'technitium_api_token: "{{ technitium_token }}"'
-          no_log: true
 
     - name: Set DNS-over-TLS forwarders
       effectivelywild.technitium_dns.technitium_dns_set_server_settings:

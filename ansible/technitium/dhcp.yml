@@ -21,8 +21,8 @@
     - name: API token is required
       ansible.builtin.fail:
         msg: >-
-          No Technitium API token. Set technitium_api_token in
-          ansible/group_vars/technitium.yml, or run ansible/technitium/init.yml on a fresh install.
+          No Technitium API token. Create one in the web console and set
+          technitium_api_token in ansible/group_vars/technitium.yml.
       when: technitium_token is not defined
 
     - name: List DHCP scopes

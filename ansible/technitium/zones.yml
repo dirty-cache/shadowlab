@@ -18,8 +18,8 @@
     - name: API token is required
       ansible.builtin.fail:
         msg: >-
-          No Technitium API token. Set technitium_api_token in
-          ansible/group_vars/technitium.yml, or run ansible/technitium/init.yml on a fresh install.
+          No Technitium API token. Create one in the web console and set
+          technitium_api_token in ansible/group_vars/technitium.yml.
       when: technitium_token is not defined
 
     - name: Ensure the primary zone exists
@@ -34,20 +34,25 @@
         state: present
 
     - name: Ensure DNS records
+      vars:
+        dns_label: "{{ item.name | trim | regex_replace('\\.$', '') }}"
+        dns_name: "{{ technitium_zone if dns_label in ['@', '', technitium_zone] else (dns_label if dns_label.endswith('.' + technitium_zone) else dns_label ~ '.' ~ technitium_zone) }}"
+        cname_label: "{{ item.target | default('') | trim | regex_replace('\\.$', '') }}"
+        cname_name: "{{ technitium_zone if cname_label in ['@', '', technitium_zone] else (cname_label if cname_label.endswith('.' + technitium_zone) else cname_label ~ '.' ~ technitium_zone) }}"
       effectivelywild.technitium_dns.technitium_dns_record:
         api_url: "{{ technitium_url }}"
         api_port: "{{ technitium_port }}"
         validate_certs: "{{ technitium_validate_certs }}"
         api_token: "{{ technitium_token }}"
         zone: "{{ technitium_zone }}"
-        name: "{{ technitium_zone if item.name in ['@', technitium_zone] else (item.name if '.' in item.name else item.name + '.' + technitium_zone) }}"
+        name: "{{ dns_name }}"
         type: "{{ item.type }}"
         ipAddress: "{{ item.address | default(omit) }}"
-        cname: "{{ (item.target if '.' in item.target else item.target + '.' + technitium_zone) if item.type == 'CNAME' else omit }}"
+        cname: "{{ cname_name if item.type == 'CNAME' else omit }}"
         ptr: "{{ item.ptr | default(omit) }}"
         createPtrZone: "{{ item.create_ptr_zone | default(omit) }}"
         overwrite: false
         state: present
       loop: "{{ technitium_records }}"
       loop_control:
-        label: "{{ item.name }} {{ item.type }}"
+        label: "{{ dns_name }} {{ item.type }}"
