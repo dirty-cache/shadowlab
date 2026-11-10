@@ -1,0 +1,35 @@
+---
+# Same set as contrib/packages.txt, used by bin/setup-rocky.
+rocky_packages:
+  - atop
+  - autofs
+  - bash-completion
+  - bind-utils
+  - bzip2
+  - dnf-automatic
+  - dstat
+  - epel-release
+  - git
+  - htop
+  - iftop
+  - iotop
+  - lsof
+  - net-tools
+  - nfs-utils
+  - nmap
+  - parted
+  - pciutils
+  - pv
+  - qemu-guest-agent
+  - rsync
+  - screen
+  - sssd
+  - sssd-ldap
+  - sqlite
+  - sudo
+  - sysstat
+  - tar
+  - unzip
+  - vim
+  - wget
+  - xfsprogs

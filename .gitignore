@@ -1,6 +1,7 @@
 iso/*
 tmp/*
 config/pve.yaml
+ansible/technitium/api_token
 config/opnsense/settings.json
 config/opnsense/opnsense.xml
 config/opnsense_apikey*.txt

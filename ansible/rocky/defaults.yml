@@ -1,0 +1,3 @@
+---
+# Reboot when dnf update actually changed packages. setup-rocky only prints a reminder.
+rocky_reboot: true

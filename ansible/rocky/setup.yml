@@ -1,0 +1,52 @@
+---
+# Prepare a Rocky Linux host the way bin/setup-rocky does.
+#
+# From the repo root, with root SSH to the VM:
+#
+#   ansible-playbook -i ansible/rocky/inventory ansible/rocky/setup.yml -k
+#
+# Defaults match the mgt VM in docs/06_rocky.md (192.168.70.2, user root).
+# -k prompts for the SSH password. Skip the reboot with -e rocky_reboot=false.
+
+- name: Set up Rocky Linux
+  hosts: rocky
+  gather_facts: true
+  vars_files:
+    - defaults.yml
+
+  tasks:
+    - name: Confirm this is an RPM host
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.pkg_mgr == 'dnf'
+        fail_msg: Not an RPM based host
+
+    - name: Update all packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+      register: rocky_update
+
+    - name: Install EPEL
+      ansible.builtin.dnf:
+        name:
+          - epel-release
+        state: present
+
+    - name: Install base packages
+      ansible.builtin.dnf:
+        name: "{{ rocky_packages }}"
+        state: present
+
+    - name: Enable qemu-guest-agent
+      ansible.builtin.service:
+        name: qemu-guest-agent
+        enabled: true
+        state: started
+
+    - name: Reboot so the updates take effect
+      ansible.builtin.reboot:
+        msg: Reboot after Rocky package update
+      when:
+        - rocky_reboot | bool
+        - rocky_update.changed
