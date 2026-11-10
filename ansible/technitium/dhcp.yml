@@ -1,0 +1,68 @@
+---
+# DHCP scope for the lab LAN. The API token is technitium_api_token in
+# ansible/group_vars/technitium.yml.
+#
+#   ansible-playbook ansible/technitium/dhcp.yml
+#
+# Removes Technitium's factory 192.168.1.0/24 scope and serves 192.168.70.101-200.
+# Gateway is 192.168.70.254. Clients use this DNS server and shadowlab.lan.
+
+- name: Configure the Technitium DHCP scope
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - defaults.yml
+
+  tasks:
+    - name: Load the API token
+      ansible.builtin.include_tasks: tasks/load_token.yml
+
+    - name: API token is required
+      ansible.builtin.fail:
+        msg: >-
+          No Technitium API token. Set technitium_api_token in
+          ansible/group_vars/technitium.yml, or run ansible/technitium/init.yml on a fresh install.
+      when: technitium_token is not defined
+
+    - name: List DHCP scopes
+      effectivelywild.technitium_dns.technitium_dns_list_dhcp_scopes:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+      register: technitium_scopes
+
+    - name: Remove the factory 192.168.1.0 scope
+      effectivelywild.technitium_dns.technitium_dns_delete_dhcp_scope:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+        name: "{{ item.name }}"
+      loop: "{{ technitium_scopes.scopes | selectattr('networkAddress', 'equalto', technitium_dhcp_replaced_network) | rejectattr('name', 'equalto', technitium_dhcp_scope) | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Set the lab DHCP scope
+      effectivelywild.technitium_dns.technitium_dns_set_dhcp_scope:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+        name: "{{ technitium_dhcp_scope }}"
+        startingAddress: "{{ technitium_dhcp_start }}"
+        endingAddress: "{{ technitium_dhcp_end }}"
+        subnetMask: "{{ technitium_dhcp_mask }}"
+        routerAddress: "{{ technitium_dhcp_router }}"
+        domainName: "{{ technitium_zone }}"
+        useThisDnsServer: true
+        dnsUpdates: true
+
+    - name: Enable the lab DHCP scope
+      effectivelywild.technitium_dns.technitium_dns_enable_dhcp_scope:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+        name: "{{ technitium_dhcp_scope }}"

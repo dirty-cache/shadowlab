@@ -1,0 +1,10 @@
+---
+# make-ksdisk argument. The image is iso/<name>.img and is uploaded as <name>.img.raw.
+ksdisk_name: kickstart
+ksdisk_storage: local
+ksdisk_timeout: 120
+
+# create-vm.yml. Pass -e vm_name=docker. Optional -e vm_config=rocky or a YAML path.
+vm_name: ""
+vm_config: ""
+vm_timeout: 600

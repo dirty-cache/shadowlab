@@ -2,11 +2,13 @@
 # Initialize Technitium after the container is up.
 #
 #   ansible-galaxy collection install -r ansible/technitium/requirements.yml
-#   TECHNITIUM_NEW_PASSWORD='choose-one' ansible-playbook ansible/technitium/init.yml
+#   ansible-playbook ansible/technitium/init.yml
 #
-# The first run changes the default admin password, writes ansible/technitium/api_token,
-# then sets forwarders, the shadowlab.lan zone, and the records in defaults.yml.
-# Later runs reuse the saved token. api_url must not include the port; the collection appends it.
+# Copy ansible/group_vars/technitium.yml.example to technitium.yml first and set
+# technitium_new_password. The first run changes the default admin password, writes
+# technitium_api_token into that file, then sets the DNS-over-TLS forwarders.
+# Zones and records are ansible/technitium/zones.yml.
+# Later runs read the token from group_vars. api_url must not include the port.
 
 - name: Initialize Technitium DNS
   hosts: localhost
@@ -14,9 +16,6 @@
   gather_facts: false
   vars_files:
     - defaults.yml
-  vars:
-    technitium_api_token: "{{ lookup('env', 'TECHNITIUM_API_TOKEN') | default('', true) }}"
-    technitium_new_password: "{{ lookup('env', 'TECHNITIUM_NEW_PASSWORD') | default('', true) }}"
 
   tasks:
     - name: Check the Technitium API
@@ -25,35 +24,8 @@
         return_content: true
       register: technitium_status
 
-    - name: Use an API token from the environment or extra vars
-      ansible.builtin.set_fact:
-        technitium_token: "{{ technitium_api_token | trim }}"
-      when: technitium_api_token | trim | length > 0
-      no_log: true
-
-    - name: Look for a saved API token
-      ansible.builtin.stat:
-        path: "{{ playbook_dir }}/api_token"
-      register: technitium_token_file
-      when: technitium_token is not defined
-
-    - name: Read the saved API token
-      ansible.builtin.slurp:
-        src: "{{ playbook_dir }}/api_token"
-      register: technitium_token_slurp
-      when:
-        - technitium_token is not defined
-        - technitium_token_file.stat.exists
-      no_log: true
-
-    - name: Use the saved API token
-      ansible.builtin.set_fact:
-        technitium_token: "{{ technitium_token_slurp.content | b64decode | trim }}"
-      when:
-        - technitium_token is not defined
-        - technitium_token_slurp.content is defined
-        - (technitium_token_slurp.content | b64decode | trim) | length > 0
-      no_log: true
+    - name: Load the API token
+      ansible.builtin.include_tasks: tasks/load_token.yml
 
     - name: Create an API token when none is saved
       when: technitium_token is not defined
@@ -62,10 +34,10 @@
           ansible.builtin.assert:
             quiet: true
             that:
-              - technitium_new_password | length > 0
+              - technitium_new_password | default('') | length > 0
             fail_msg: >-
               Technitium still has the default admin password.
-              Set TECHNITIUM_NEW_PASSWORD or pass -e technitium_new_password=...
+              Set technitium_new_password in ansible/group_vars/technitium.yml.
           when: technitium_status.json.hasDefaultCredentials | bool
 
         - name: Log in
@@ -86,7 +58,7 @@
             validate_certs: "{{ technitium_validate_certs }}"
             api_token: "{{ technitium_login.token }}"
             pass: "{{ technitium_password }}"
-            newPass: "{{ technitium_new_password }}"
+            newPass: "{{ technitium_new_password | default('') }}"
           when: technitium_status.json.hasDefaultCredentials | bool
           no_log: true
 
@@ -96,7 +68,7 @@
             api_port: "{{ technitium_port }}"
             validate_certs: "{{ technitium_validate_certs }}"
             username: "{{ technitium_username }}"
-            password: "{{ technitium_new_password }}"
+            password: "{{ technitium_new_password | default('') }}"
             include_info: false
           register: technitium_relogin
           when: technitium_status.json.hasDefaultCredentials | bool
@@ -118,9 +90,8 @@
           ansible.builtin.fail:
             msg: >-
               API token '{{ technitium_token_name }}' already exists on the server,
-              and {{ playbook_dir }}/api_token is missing.
-              Delete that session in the Technitium console, or pass the token with
-              TECHNITIUM_API_TOKEN or -e technitium_api_token=...
+              and technitium_api_token in ansible/group_vars/technitium.yml is empty.
+              Delete that session in the Technitium console, or paste the token into that file.
           when: not technitium_created.changed
 
         - name: Remember the new API token
@@ -128,11 +99,11 @@
             technitium_token: "{{ technitium_created.api_response.response.token }}"
           no_log: true
 
-        - name: Save the API token
-          ansible.builtin.copy:
-            dest: "{{ playbook_dir }}/api_token"
-            content: "{{ technitium_token }}\n"
-            mode: "0600"
+        - name: Save the API token into group vars
+          ansible.builtin.replace:
+            path: "{{ playbook_dir }}/../group_vars/technitium.yml"
+            regexp: '^technitium_api_token:.*$'
+            replace: 'technitium_api_token: "{{ technitium_token }}"'
           no_log: true
 
     - name: Set DNS-over-TLS forwarders
@@ -143,33 +114,3 @@
         api_token: "{{ technitium_token }}"
         forwarders: "{{ technitium_forwarders }}"
         forwarderProtocol: "{{ technitium_forwarder_protocol }}"
-
-    - name: Ensure the primary zone exists
-      effectivelywild.technitium_dns.technitium_dns_zone:
-        api_url: "{{ technitium_url }}"
-        api_port: "{{ technitium_port }}"
-        validate_certs: "{{ technitium_validate_certs }}"
-        api_token: "{{ technitium_token }}"
-        zone: "{{ technitium_zone }}"
-        type: Primary
-        useSoaSerialDateScheme: "{{ technitium_use_soa_serial_date_scheme }}"
-        state: present
-
-    - name: Ensure DNS records
-      effectivelywild.technitium_dns.technitium_dns_record:
-        api_url: "{{ technitium_url }}"
-        api_port: "{{ technitium_port }}"
-        validate_certs: "{{ technitium_validate_certs }}"
-        api_token: "{{ technitium_token }}"
-        zone: "{{ technitium_zone }}"
-        name: "{{ technitium_zone if item.name in ['@', technitium_zone] else (item.name if '.' in item.name else item.name + '.' + technitium_zone) }}"
-        type: "{{ item.type }}"
-        ipAddress: "{{ item.address | default(omit) }}"
-        cname: "{{ (item.target if '.' in item.target else item.target + '.' + technitium_zone) if item.type == 'CNAME' else omit }}"
-        ptr: "{{ item.ptr | default(omit) }}"
-        createPtrZone: "{{ item.create_ptr_zone | default(omit) }}"
-        overwrite: false
-        state: present
-      loop: "{{ technitium_records }}"
-      loop_control:
-        label: "{{ item.name }} {{ item.type }}"

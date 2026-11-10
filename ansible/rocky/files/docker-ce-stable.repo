@@ -1,0 +1,4 @@
+[docker-ce-stable]
+baseurl = https://download.docker.com/linux/rhel/$releasever/$basearch/stable
+gpgkey = https://download.docker.com/linux/rhel/gpg
+name = Docker CE Stable - x86_64

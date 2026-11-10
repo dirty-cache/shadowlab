@@ -1,0 +1,5 @@
+---
+# Copy to ansible/group_vars/technitium.yml. That file is gitignored.
+technitium_api_token: ""
+# Replaces the factory admin password on the first init run. Leave empty after that.
+technitium_new_password: ""

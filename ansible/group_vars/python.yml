@@ -1,0 +1,4 @@
+---
+# community.proxmox imports proxmoxer in this interpreter. The uv-managed
+# python Ansible itself uses cannot take extra packages.
+ansible_python_interpreter: "{{ inventory_dir }}/proxmox/.venv/bin/python"

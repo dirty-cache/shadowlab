@@ -3,7 +3,7 @@
 #
 # From the repo root, with root SSH to the VM:
 #
-#   ansible-playbook -i ansible/rocky/inventory ansible/rocky/setup.yml -k
+#   ansible-playbook -i ansible/hosts ansible/rocky/setup.yml -k
 #
 # Defaults match the mgt VM in docs/06_rocky.md (192.168.70.2, user root).
 # -k prompts for the SSH password. Skip the reboot with -e rocky_reboot=false.

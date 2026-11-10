@@ -1,0 +1,171 @@
+---
+# Create a Proxmox VM from config/vms/<name>.yaml.
+#
+#   ansible-galaxy collection install -r ansible/proxmox/requirements.yml
+#   ansible-playbook -i ansible/hosts ansible/proxmox/create-vm.yml -e vm_name=docker
+#   ansible-playbook -i ansible/hosts ansible/proxmox/create-vm.yml -e vm_name=docker -e vm_config=rocky
+#
+# The proxmox inventory group may list several hosts. pve_target in
+# ansible/group_vars/pve.yml selects the one this play runs against.
+# Its ansible_host is the API address. Override one run with -e pve_host=10.0.0.5.
+# Tasks run on the controller so the repo files stay local.
+# The cluster node name defaults to that inventory hostname.
+# vm_config is a file name under config/vms, or a path. .yaml is added when omitted.
+# A missing or empty oemdisk skips the second disk. API credentials are ansible/group_vars/pve.yml.
+# The VM is left stopped. Once per controller:
+#   uv venv ansible/proxmox/.venv && uv pip install --python ansible/proxmox/.venv/bin/python -r ansible/proxmox/requirements.txt
+
+- name: Create a Proxmox VM
+  hosts: proxmox
+  connection: local
+  gather_facts: false
+  vars_files:
+    - defaults.yml
+    - ../group_vars/pve.yml
+    - ../group_vars/python.yml
+
+  tasks:
+    - name: Require pve_target to name one inventory host
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - pve_target | default('') | trim | length > 0
+          - (pve_target | trim) in groups['proxmox']
+        fail_msg: Set pve_target in ansible/group_vars/pve.yml to one host in the proxmox inventory group.
+      run_once: true
+
+    - name: Skip every Proxmox host except pve_target
+      ansible.builtin.meta: end_host
+      when: inventory_hostname != (pve_target | trim)
+
+    - name: Require a VM name
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - vm_name | trim | length > 0
+        fail_msg: Pass the VM name with -e vm_name=docker.
+
+    - name: Require the Proxmox API variables
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - pve_user is defined
+        fail_msg: Copy ansible/group_vars/pve.yml.example to pve.yml.
+
+    - name: Use a token when token_secret is set
+      ansible.builtin.set_fact:
+        pve_use_token: "{{ (pve_token_secret | default('') | trim | length) > 0 }}"
+        pve_api_host: "{{ pve_host | default(ansible_host) }}"
+        pve_api_node: "{{ node_from_config if node_from_config | length > 0 else inventory_hostname }}"
+      vars:
+        node_from_config: "{{ pve_node | default('') | trim }}"
+
+    - name: Require a token name with the token secret
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - pve_token_name | default('') | trim | length > 0
+        fail_msg: pve.yml token_name is required when token_secret is set.
+      when: pve_use_token | bool
+
+    - name: Require a password when no token is set
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - pve_password | default('') | length > 0
+        fail_msg: pve.yml needs pve_token_secret or pve_password.
+      when: not (pve_use_token | bool)
+
+    - name: Choose the VM config argument
+      ansible.builtin.set_fact:
+        vm_config_arg: "{{ vm_config | trim if (vm_config | trim | length > 0) else vm_name | trim }}"
+
+    - name: Place a relative config under config/vms
+      ansible.builtin.set_fact:
+        vm_config_arg: "{{ playbook_dir }}/../../config/vms/{{ vm_config_arg }}"
+      when: not vm_config_arg is match('^/')
+
+    - name: Check whether the config path is a directory
+      ansible.builtin.stat:
+        path: "{{ vm_config_arg }}"
+      register: vm_config_path
+
+    - name: Use <name>.yaml inside a config directory
+      ansible.builtin.set_fact:
+        vm_config_arg: "{{ vm_config_arg }}/{{ vm_name | trim }}.yaml"
+      when: vm_config_path.stat.isdir | default(false)
+
+    - name: Add the .yaml extension when it was omitted
+      ansible.builtin.set_fact:
+        vm_config_arg: "{{ vm_config_arg }}.yaml"
+      when: vm_config_arg[-5:] | lower != '.yaml'
+
+    - name: Check the VM config
+      ansible.builtin.stat:
+        path: "{{ vm_config_arg }}"
+      register: vm_config_file
+
+    - name: Require the VM config
+      ansible.builtin.assert:
+        that: vm_config_file.stat.exists
+        fail_msg: "Config not found: {{ vm_config_arg }}. Copy config/vms/name.yaml.example."
+
+    - name: Load the VM config
+      ansible.builtin.include_vars:
+        file: "{{ vm_config_arg }}"
+        name: vm
+
+    - name: Require nic0
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - vm.nic0 | default('') | trim | length > 0
+        fail_msg: config nic0 is required.
+
+    - name: Start with the boot disk
+      ansible.builtin.set_fact:
+        vm_scsi:
+          scsi0: "{{ vm.storage }}:{{ vm.disk_gb }},serial=boot"
+        vm_net:
+          net0: "virtio,bridge={{ vm.nic0 | trim }}"
+
+    - name: Add the OEM disk when oemdisk is set
+      ansible.builtin.set_fact:
+        vm_scsi: "{{ vm_scsi | combine({ 'scsi1': vm.storage ~ ':0,import-from=local:import/' ~ (vm.oemdisk | trim) }) }}"
+      when: vm.oemdisk | default('') | trim | length > 0
+
+    - name: Add nic1 and nic2 when they are set
+      ansible.builtin.set_fact:
+        vm_net: "{{ vm_net | combine({ 'net' ~ item: 'virtio,bridge=' ~ (vm['nic' ~ item] | trim) }) }}"
+      loop:
+        - 1
+        - 2
+      when: vm['nic' ~ item] | default('') | trim | length > 0
+
+    - name: Create the VM
+      community.proxmox.proxmox_kvm:
+        api_host: "{{ pve_api_host }}"
+        api_port: "{{ pve_port | default(8006) }}"
+        api_user: "{{ pve_user | default('root@pam') }}"
+        api_password: "{{ pve_use_token | bool | ternary(omit, pve_password) }}"
+        api_token_id: "{{ pve_use_token | bool | ternary(pve_token_name, omit) }}"
+        api_token_secret: "{{ pve_use_token | bool | ternary(pve_token_secret, omit) }}"
+        validate_certs: "{{ pve_verify_ssl | default(false) | bool }}"
+        node: "{{ pve_api_node }}"
+        name: "{{ vm_name | trim }}"
+        state: present
+        timeout: "{{ vm_timeout }}"
+        onboot: true
+        ostype: l26
+        machine: q35
+        agent: enabled=1
+        cpu: host
+        sockets: "{{ vm.sockets }}"
+        cores: "{{ vm.cores }}"
+        memory: "{{ vm.memory }}"
+        scsihw: virtio-scsi-single
+        scsi: "{{ vm_scsi }}"
+        ide:
+          ide2: "local:iso/{{ vm.iso }},media=cdrom"
+        boot: order=scsi0;ide2
+        net: "{{ vm_net }}"

@@ -1,0 +1,91 @@
+---
+# Upload an OEMDRV image built by bin/make-ksdisk to Proxmox local/import.
+#
+#   ansible-galaxy collection install -r ansible/proxmox/requirements.yml
+#   ansible-playbook -i ansible/hosts ansible/proxmox/upload-ksdisk.yml
+#   ansible-playbook -i ansible/hosts ansible/proxmox/upload-ksdisk.yml -e ksdisk_name=docker
+#
+# The Proxmox API host is the proxmox group's ansible_host. Change it in the inventory
+# or override one run with -e pve_host=10.0.0.5. Tasks run on the controller so the
+# image in iso/ stays local. bin/make-ksdisk writes iso/<name>.img. Proxmox import
+# content only accepts names such as .raw, and create-vm.yml expects
+# local:import/<name>.img.raw, so this uploads the image under that name.
+# API credentials are ansible/group_vars/pve.yml. Once per controller:
+#   uv venv ansible/proxmox/.venv && uv pip install --python ansible/proxmox/.venv/bin/python -r ansible/proxmox/requirements.txt
+
+- name: Upload an OEMDRV image to Proxmox
+  hosts: proxmox
+  connection: local
+  gather_facts: false
+  vars_files:
+    - defaults.yml
+    - ../group_vars/pve.yml
+    - ../group_vars/python.yml
+
+  tasks:
+    - name: Require the Proxmox API variables
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - pve_user is defined
+        fail_msg: Copy ansible/group_vars/pve.yml.example to pve.yml.
+
+    - name: Use a token when token_secret is set
+      ansible.builtin.set_fact:
+        pve_use_token: "{{ (pve_token_secret | default('') | trim | length) > 0 }}"
+        pve_api_host: "{{ pve_host | default(ansible_host) }}"
+        pve_api_node: "{{ node_from_config if node_from_config | length > 0 else inventory_hostname }}"
+      vars:
+        node_from_config: "{{ pve_node | default('') | trim }}"
+
+    - name: Require a token name with the token secret
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - pve_token_name | default('') | trim | length > 0
+        fail_msg: pve.yml token_name is required when token_secret is set.
+      when: pve_use_token | bool
+
+    - name: Require a password when no token is set
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - pve_password | default('') | length > 0
+        fail_msg: pve.yml needs pve_token_secret or pve_password.
+      when: not (pve_use_token | bool)
+
+    - name: Check the OEMDRV image
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../../iso/{{ ksdisk_name }}.img"
+      register: ksdisk_image
+
+    - name: Require the image from make-ksdisk
+      ansible.builtin.assert:
+        that:
+          - ksdisk_image.stat.exists
+          - ksdisk_image.stat.isreg
+        fail_msg: "No image at iso/{{ ksdisk_name }}.img. Run bin/make-ksdisk {{ ksdisk_name }} first."
+
+    - name: Expose the image under the .raw name Proxmox import requires
+      ansible.builtin.file:
+        src: "{{ playbook_dir }}/../../iso/{{ ksdisk_name }}.img"
+        dest: "{{ playbook_dir }}/../../iso/{{ ksdisk_name }}.img.raw"
+        state: link
+        force: true
+
+    - name: Upload the image to local/import
+      community.proxmox.proxmox_template:
+        api_host: "{{ pve_api_host }}"
+        api_port: "{{ pve_port | default(8006) }}"
+        api_user: "{{ pve_user | default('root@pam') }}"
+        api_password: "{{ pve_use_token | bool | ternary(omit, pve_password) }}"
+        api_token_id: "{{ pve_use_token | bool | ternary(pve_token_name, omit) }}"
+        api_token_secret: "{{ pve_use_token | bool | ternary(pve_token_secret, omit) }}"
+        validate_certs: "{{ pve_verify_ssl | default(false) | bool }}"
+        api_timeout: "{{ ksdisk_timeout }}"
+        node: "{{ pve_api_node }}"
+        storage: "{{ ksdisk_storage }}"
+        content_type: import
+        src: "{{ playbook_dir }}/../../iso/{{ ksdisk_name }}.img.raw"
+        force: true
+        timeout: "{{ ksdisk_timeout }}"

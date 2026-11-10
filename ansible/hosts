@@ -1,0 +1,14 @@
+# Shared inventory. group_vars next to this file apply to every playbook
+# that uses -i ansible/hosts.
+
+# Remote Proxmox host. ansible_host is the API address.
+# Override for one run with -e pve_host=192.168.70.1
+[proxmox]
+pve ansible_host=192.168.70.11 ansible_user=root
+
+# docker VM from linux/docker.cfg. Left out of [rocky] so setup.yml does not target it.
+docker ansible_host=192.168.70.5 ansible_user=root
+
+# mgt VM from docs/06_rocky.md. Root SSH with a password is enabled at install time.
+[rocky]
+mgt ansible_host=192.168.70.2 ansible_user=root

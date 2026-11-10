@@ -1,5 +1,5 @@
 # Copy to config/vms/<vmname>.yaml. The filename (without .yaml) is the Proxmox VM name.
-# Proxmox credentials stay in config/pve.yaml.
+# Proxmox API credentials stay in ansible/group_vars/pve.yml.
 
 # Each value is a bridge name. nic0 is required. Leave nic1 or nic2 empty to skip.
 nic0: vmbr0

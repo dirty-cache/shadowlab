@@ -5,7 +5,7 @@ technitium_port: 5380
 technitium_validate_certs: true
 
 technitium_username: admin
-# Factory password. After the first run the playbook uses ansible/technitium/api_token.
+# Factory password. After the first run the API token is technitium_api_token in ansible/group_vars/technitium.yml.
 technitium_password: admin
 technitium_token_name: shadowlab-init
 
@@ -39,3 +39,12 @@ technitium_records:
   - name: homepage
     type: CNAME
     target: mgt.shadowlab.lan
+
+# Replaces the factory DHCP scope on 192.168.1.0/24.
+# Pool .101-.200 leaves the static hosts (.1, .2, .3, .254) outside the range.
+technitium_dhcp_scope: shadowlab
+technitium_dhcp_start: 192.168.70.101
+technitium_dhcp_end: 192.168.70.200
+technitium_dhcp_mask: 255.255.255.0
+technitium_dhcp_router: 192.168.70.254
+technitium_dhcp_replaced_network: 192.168.1.0

@@ -1,0 +1,20 @@
+---
+- name: Check for the Technitium group vars
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/../group_vars/technitium.yml"
+  register: technitium_vars_file
+
+- name: Technitium group vars are required
+  ansible.builtin.fail:
+    msg: Copy ansible/group_vars/technitium.yml.example to ansible/group_vars/technitium.yml and set technitium_api_token.
+  when: not technitium_vars_file.stat.exists
+
+- name: Load the Technitium group vars
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/../group_vars/technitium.yml"
+
+- name: Use the API token from group vars
+  ansible.builtin.set_fact:
+    technitium_token: "{{ technitium_api_token | trim }}"
+  when: technitium_api_token | default('') | trim | length > 0
+  no_log: true

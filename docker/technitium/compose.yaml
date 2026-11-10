@@ -1,6 +1,6 @@
 services:
   dns-server:
-    container_name: dns-server
+    container_name: technitium
     hostname: dns-server
     image: docker.io/technitium/dns-server:latest
     network_mode: "host"

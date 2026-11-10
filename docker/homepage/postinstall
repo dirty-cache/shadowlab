@@ -5,4 +5,5 @@ test -x /usr/bin/dnf || die "Not an RPM based host"
 
 test -d /var/lib/docker/volumes/homepage_config/_data/ || die "Homepage data volume not found"
 
-cp -pr /opt/docker/homepage/{services,settings}.yaml /var/lib/docker/volumes/homepage_config/_data
+test -f /var/lib/docker/volumes/homepage_config/_data/settings.yaml || cp -pr /opt/docker/homepage/settings.yaml /var/lib/docker/volumes/homepage_config/_data
+test -f /var/lib/docker/volumes/homepage_config/_data/services.yaml || cp -pr /opt/docker/homepage/services.yaml /var/lib/docker/volumes/homepage_config/_data

@@ -6,9 +6,15 @@ We want a server to run Docker for our administration tools. We are going to use
 
 We assume Rocky Linux is already running on the VM and pre-configured with the ```setup-rocky``` script.
 
-## Running Docker install script
+## Installing Docker
 
-From the ```bin``` directory, run ```install-docker <IP>``` and ```setup-firewall```.
+From the repo root, with root SSH to the VM:
+
+```
+ansible-playbook -i ansible/hosts ansible/rocky/docker.yml -k
+```
+
+The playbook targets the docker VM in `ansible/hosts` (192.168.70.5). `-k` prompts for the SSH password.
 
 The Docker environment now runs on the server.
 

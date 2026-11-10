@@ -1,0 +1,53 @@
+---
+# Primary zone and records. The API token is technitium_api_token in
+# ansible/group_vars/technitium.yml. Zone and records are in defaults.yml.
+#
+#   ansible-playbook ansible/technitium/zones.yml
+
+- name: Configure Technitium zones and records
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - defaults.yml
+
+  tasks:
+    - name: Load the API token
+      ansible.builtin.include_tasks: tasks/load_token.yml
+
+    - name: API token is required
+      ansible.builtin.fail:
+        msg: >-
+          No Technitium API token. Set technitium_api_token in
+          ansible/group_vars/technitium.yml, or run ansible/technitium/init.yml on a fresh install.
+      when: technitium_token is not defined
+
+    - name: Ensure the primary zone exists
+      effectivelywild.technitium_dns.technitium_dns_zone:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+        zone: "{{ technitium_zone }}"
+        type: Primary
+        useSoaSerialDateScheme: "{{ technitium_use_soa_serial_date_scheme }}"
+        state: present
+
+    - name: Ensure DNS records
+      effectivelywild.technitium_dns.technitium_dns_record:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+        zone: "{{ technitium_zone }}"
+        name: "{{ technitium_zone if item.name in ['@', technitium_zone] else (item.name if '.' in item.name else item.name + '.' + technitium_zone) }}"
+        type: "{{ item.type }}"
+        ipAddress: "{{ item.address | default(omit) }}"
+        cname: "{{ (item.target if '.' in item.target else item.target + '.' + technitium_zone) if item.type == 'CNAME' else omit }}"
+        ptr: "{{ item.ptr | default(omit) }}"
+        createPtrZone: "{{ item.create_ptr_zone | default(omit) }}"
+        overwrite: false
+        state: present
+      loop: "{{ technitium_records }}"
+      loop_control:
+        label: "{{ item.name }} {{ item.type }}"

@@ -8,14 +8,26 @@ Technitium is an easy to use, yet feature rich DNS and DHCP server. We will use 
 
 Use Docker to create the Technitium container.
 
-Install the Technitium Ansible collection and run the init playbook from the repo root. On a fresh install the admin password is still `admin`, so set a new one for this run:
+Install the Technitium Ansible collection. Copy `ansible/group_vars/technitium.yml.example` to `technitium.yml` and set `technitium_new_password`. On a fresh install the admin password is still `admin`.
 
 ```
 ansible-galaxy collection install -r ansible/technitium/requirements.yml
-TECHNITIUM_NEW_PASSWORD='choose-one' ansible-playbook ansible/technitium/init.yml
+ansible-playbook ansible/technitium/init.yml
 ```
 
-The playbook changes that password, saves an API token to `ansible/technitium/api_token`, then applies the forwarders, the `shadowlab.lan` zone, and the records in `ansible/technitium/defaults.yml`. Later runs reuse the saved token.
+The playbook changes the admin password to `technitium_new_password`, writes `technitium_api_token` into `ansible/group_vars/technitium.yml`, then sets the DNS-over-TLS forwarders. Later runs read the token from that file.
+
+Zones and records from `ansible/technitium/defaults.yml` are a separate playbook:
+
+```
+ansible-playbook ansible/technitium/zones.yml
+```
+
+DHCP is another playbook. It removes the factory `192.168.1.0/24` scope and enables `192.168.70.101`–`192.168.70.200`, with gateway `192.168.70.254` and this DNS server:
+
+```
+ansible-playbook ansible/technitium/dhcp.yml
+```
 
 The same result, done by hand: log in to [Technitium](http://192.168.70.2:5380). On first login, change the password. The username is admin.
 

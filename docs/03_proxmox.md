@@ -64,15 +64,15 @@ We will install the Proxmox hypervisor on a bare metal machine to run all of our
     * Upload the OPNSense ISO image
 
 * Creating API key for remote management
-    * In this repo, copy config/pve.yaml.example to pve.yaml
-    * This allows our scripts to create and manage VMs from the Linux shell
+    * In this repo, copy ansible/group_vars/pve.yml.example to pve.yml
+    * This allows Ansible to create and manage VMs from the Linux shell
     * Click Datacenter
     * Select Permissions - API Tokens
     * Add token:
         * user: root@pam
         * token ID: shadowlab
         * Privilege Separation: Disable
-    * Copy/paste the token into the pve.yaml file (token_secret)
+    * Copy/paste the token into pve.yml (pve_token_secret)
 
     
 

@@ -1,0 +1,16 @@
+---
+# Copy to ansible/group_vars/pve.yml and fill in credentials. pve.yml is gitignored.
+# The API address is ansible_host in ansible/hosts.
+
+# Inventory hostname in the proxmox group. create-vm.yml runs only on this host.
+pve_target: pve
+
+pve_port: 8006
+pve_verify_ssl: false
+pve_user: root@pam
+pve_token_name: shadowlab
+pve_token_secret: ""
+pve_password: ""
+
+# Empty uses the inventory hostname as the cluster node name.
+pve_node: ""

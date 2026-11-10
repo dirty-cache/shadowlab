@@ -1,0 +1,53 @@
+---
+# Install Docker CE the way bin/install-docker does.
+#
+# From the repo root, with root SSH to the VM:
+#
+#   ansible-playbook -i ansible/hosts ansible/rocky/docker.yml -k
+#
+# Defaults match the docker VM in linux/docker.cfg (192.168.70.5, user root).
+# -k prompts for the SSH password.
+
+- name: Install Docker
+  hosts: docker
+  gather_facts: true
+
+  tasks:
+    - name: Confirm this is an RPM host
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.pkg_mgr == 'dnf'
+        fail_msg: Not an RPM based host
+
+    - name: Install the Docker CE repository
+      ansible.builtin.copy:
+        src: docker-ce-stable.repo
+        dest: /etc/yum.repos.d/docker-ce-stable.repo
+        mode: "0644"
+
+    - name: Install Docker
+      ansible.builtin.dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+
+    - name: Enable Docker
+      ansible.builtin.service:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Create /opt/docker
+      ansible.builtin.file:
+        path: /opt/docker
+        state: directory
+        mode: "0755"
+
+    - name: Link Docker volumes at /volumes
+      ansible.builtin.file:
+        src: /var/lib/docker/volumes
+        dest: /volumes
+        state: link

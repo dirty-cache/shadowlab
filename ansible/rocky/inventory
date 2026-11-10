@@ -1,3 +1,0 @@
-# mgt VM from docs/06_rocky.md. Root SSH with a password is enabled at install time.
-[rocky]
-mgt ansible_host=192.168.70.2 ansible_user=root
