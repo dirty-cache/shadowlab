@@ -1,0 +1,65 @@
+---
+# Install PostgreSQL 18 from the PGDG repositories, replacing bin/install-postgres.
+#
+# From the repo root, with root SSH to the VM:
+#
+#   ansible-playbook -i ansible/hosts ansible/rocky/postgres.yml -k
+#
+# Targets the rocky group (mgt, 192.168.70.2). -k prompts for the SSH password.
+# The shell script only installed packages. This playbook also disables the
+# AppStream postgresql module, initializes the data directory, and starts
+# postgresql-18.
+
+- name: Install PostgreSQL
+  hosts: rocky
+  gather_facts: true
+
+  tasks:
+    - name: Confirm this is an RPM host
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.pkg_mgr == 'dnf'
+        fail_msg: Not an RPM based host
+
+    - name: Install the PGDG repository
+      ansible.builtin.dnf:
+        name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+        state: present
+        disable_gpg_check: true
+
+    - name: Disable the AppStream PostgreSQL module
+      ansible.builtin.command:
+        cmd: dnf -qy module disable postgresql
+      register: pgdg_module
+      changed_when: "'Disabling modules' in pgdg_module.stdout"
+
+    - name: Disable PostgreSQL repositories other than 18
+      ansible.builtin.ini_file:
+        path: /etc/yum.repos.d/pgdg-redhat-all.repo
+        section: "{{ item }}"
+        option: enabled
+        value: "0"
+        mode: "0644"
+      loop:
+        - pgdg14
+        - pgdg15
+        - pgdg16
+        - pgdg17
+
+    - name: Install PostgreSQL 18
+      ansible.builtin.dnf:
+        name:
+          - postgresql18-server
+          - postgresql18-contrib
+        state: present
+
+    - name: Initialize the PostgreSQL data directory
+      ansible.builtin.command:
+        cmd: /usr/pgsql-18/bin/postgresql-18-setup initdb
+        creates: /var/lib/pgsql/18/data/PG_VERSION
+
+    - name: Enable PostgreSQL
+      ansible.builtin.service:
+        name: postgresql-18
+        enabled: true
+        state: started

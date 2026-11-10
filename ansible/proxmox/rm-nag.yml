@@ -1,0 +1,56 @@
+---
+# Remove the Proxmox VE subscription nag from the web UI.
+#
+# Runs on each host in the proxmox inventory group, over SSH as root:
+#
+#   ansible-playbook -i ansible/hosts ansible/proxmox/rm-nag.yml -k
+#
+# The patch edits proxmoxlib.js: on lines that mention data.status, drop the
+# first ! and replace active with NoMoreNagging. A second run does nothing
+# once that marker is present.
+
+- name: Remove the Proxmox subscription nag
+  hosts: proxmox
+  gather_facts: false
+
+  tasks:
+    - name: Confirm this is a Proxmox host
+      ansible.builtin.stat:
+        path: /usr/sbin/qm
+      register: pve_qm
+
+    - name: This host is not Proxmox
+      ansible.builtin.fail:
+        msg: /usr/sbin/qm is not executable.
+      when: not (pve_qm.stat.executable | default(false))
+
+    - name: Check the web UI library
+      ansible.builtin.stat:
+        path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+      register: pve_proxmoxlib
+
+    - name: See if the nag is already patched
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -q
+          - NoMoreNagging
+          - /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+      register: pve_nag
+      changed_when: false
+      failed_when: pve_nag.rc not in [0, 1]
+      when: pve_proxmoxlib.stat.size | default(0) > 0
+
+    - name: Patch the web UI subscription nag
+      ansible.builtin.command:
+        argv:
+          - sed
+          - -i
+          - -e
+          - '/data\.status/ s/!//'
+          - -e
+          - '/data\.status/ s/active/NoMoreNagging/'
+          - /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+      when:
+        - pve_proxmoxlib.stat.size | default(0) > 0
+        - pve_nag.rc | default(0) == 1

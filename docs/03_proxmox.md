@@ -37,6 +37,11 @@ We will install the Proxmox hypervisor on a bare metal machine to run all of our
 
 * Open the browser and go to the [Proxmox URL](https://192.168.70.1:8006). Ignore certificate warnings.
 * Login as root with your given password
+* Remove the subscription nag from the web UI. From the repo root, with root SSH to the host:
+
+```
+ansible-playbook -i ansible/hosts ansible/proxmox/rm-nag.yml -k
+```
 
 ## Setup
 
