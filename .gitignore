@@ -1,8 +1,10 @@
 iso/*
 tmp/*
-config/pve.yaml
+ansible/proxmox/group_vars/proxmox/pve.yml
 ansible/technitium/api_token
 config/opnsense/settings.json
 config/opnsense/opnsense.xml
 config/opnsense_apikey*.txt
+linux/id_ansible*
 __pycache__/
+ansible/proxmox/.venv/

@@ -29,3 +29,7 @@ The Shadow Lab is built on free (mostly Open Source) tools for management.
 
 * Setup the bootstrap desktop on the private LAN
 * Follow the Proxmox instructions
+
+## Links
+
+[Links](docs/links.md)
