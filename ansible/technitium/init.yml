@@ -1,0 +1,175 @@
+---
+# Initialize Technitium after the container is up.
+#
+#   ansible-galaxy collection install -r ansible/technitium/requirements.yml
+#   TECHNITIUM_NEW_PASSWORD='choose-one' ansible-playbook ansible/technitium/init.yml
+#
+# The first run changes the default admin password, writes ansible/technitium/api_token,
+# then sets forwarders, the shadowlab.lan zone, and the records in defaults.yml.
+# Later runs reuse the saved token. api_url must not include the port; the collection appends it.
+
+- name: Initialize Technitium DNS
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - defaults.yml
+  vars:
+    technitium_api_token: "{{ lookup('env', 'TECHNITIUM_API_TOKEN') | default('', true) }}"
+    technitium_new_password: "{{ lookup('env', 'TECHNITIUM_NEW_PASSWORD') | default('', true) }}"
+
+  tasks:
+    - name: Check the Technitium API
+      ansible.builtin.uri:
+        url: "{{ technitium_url }}:{{ technitium_port }}/api/status"
+        return_content: true
+      register: technitium_status
+
+    - name: Use an API token from the environment or extra vars
+      ansible.builtin.set_fact:
+        technitium_token: "{{ technitium_api_token | trim }}"
+      when: technitium_api_token | trim | length > 0
+      no_log: true
+
+    - name: Look for a saved API token
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/api_token"
+      register: technitium_token_file
+      when: technitium_token is not defined
+
+    - name: Read the saved API token
+      ansible.builtin.slurp:
+        src: "{{ playbook_dir }}/api_token"
+      register: technitium_token_slurp
+      when:
+        - technitium_token is not defined
+        - technitium_token_file.stat.exists
+      no_log: true
+
+    - name: Use the saved API token
+      ansible.builtin.set_fact:
+        technitium_token: "{{ technitium_token_slurp.content | b64decode | trim }}"
+      when:
+        - technitium_token is not defined
+        - technitium_token_slurp.content is defined
+        - (technitium_token_slurp.content | b64decode | trim) | length > 0
+      no_log: true
+
+    - name: Create an API token when none is saved
+      when: technitium_token is not defined
+      block:
+        - name: Require a new admin password on a fresh install
+          ansible.builtin.assert:
+            quiet: true
+            that:
+              - technitium_new_password | length > 0
+            fail_msg: >-
+              Technitium still has the default admin password.
+              Set TECHNITIUM_NEW_PASSWORD or pass -e technitium_new_password=...
+          when: technitium_status.json.hasDefaultCredentials | bool
+
+        - name: Log in
+          effectivelywild.technitium_dns.technitium_dns_login:
+            api_url: "{{ technitium_url }}"
+            api_port: "{{ technitium_port }}"
+            validate_certs: "{{ technitium_validate_certs }}"
+            username: "{{ technitium_username }}"
+            password: "{{ technitium_password }}"
+            include_info: false
+          register: technitium_login
+          no_log: true
+
+        - name: Change the default admin password
+          effectivelywild.technitium_dns.technitium_dns_change_password:
+            api_url: "{{ technitium_url }}"
+            api_port: "{{ technitium_port }}"
+            validate_certs: "{{ technitium_validate_certs }}"
+            api_token: "{{ technitium_login.token }}"
+            pass: "{{ technitium_password }}"
+            newPass: "{{ technitium_new_password }}"
+          when: technitium_status.json.hasDefaultCredentials | bool
+          no_log: true
+
+        - name: Log in again with the new password
+          effectivelywild.technitium_dns.technitium_dns_login:
+            api_url: "{{ technitium_url }}"
+            api_port: "{{ technitium_port }}"
+            validate_certs: "{{ technitium_validate_certs }}"
+            username: "{{ technitium_username }}"
+            password: "{{ technitium_new_password }}"
+            include_info: false
+          register: technitium_relogin
+          when: technitium_status.json.hasDefaultCredentials | bool
+          no_log: true
+
+        - name: Create a non-expiring API token
+          effectivelywild.technitium_dns.technitium_dns_create_token:
+            api_url: "{{ technitium_url }}"
+            api_port: "{{ technitium_port }}"
+            validate_certs: "{{ technitium_validate_certs }}"
+            api_token: "{{ technitium_relogin.token if technitium_relogin is defined else technitium_login.token }}"
+            user: "{{ technitium_username }}"
+            tokenName: "{{ technitium_token_name }}"
+            return_token: true
+          register: technitium_created
+          no_log: true
+
+        - name: Saved token is missing but the named token already exists
+          ansible.builtin.fail:
+            msg: >-
+              API token '{{ technitium_token_name }}' already exists on the server,
+              and {{ playbook_dir }}/api_token is missing.
+              Delete that session in the Technitium console, or pass the token with
+              TECHNITIUM_API_TOKEN or -e technitium_api_token=...
+          when: not technitium_created.changed
+
+        - name: Remember the new API token
+          ansible.builtin.set_fact:
+            technitium_token: "{{ technitium_created.api_response.response.token }}"
+          no_log: true
+
+        - name: Save the API token
+          ansible.builtin.copy:
+            dest: "{{ playbook_dir }}/api_token"
+            content: "{{ technitium_token }}\n"
+            mode: "0600"
+          no_log: true
+
+    - name: Set DNS-over-TLS forwarders
+      effectivelywild.technitium_dns.technitium_dns_set_server_settings:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+        forwarders: "{{ technitium_forwarders }}"
+        forwarderProtocol: "{{ technitium_forwarder_protocol }}"
+
+    - name: Ensure the primary zone exists
+      effectivelywild.technitium_dns.technitium_dns_zone:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+        zone: "{{ technitium_zone }}"
+        type: Primary
+        useSoaSerialDateScheme: "{{ technitium_use_soa_serial_date_scheme }}"
+        state: present
+
+    - name: Ensure DNS records
+      effectivelywild.technitium_dns.technitium_dns_record:
+        api_url: "{{ technitium_url }}"
+        api_port: "{{ technitium_port }}"
+        validate_certs: "{{ technitium_validate_certs }}"
+        api_token: "{{ technitium_token }}"
+        zone: "{{ technitium_zone }}"
+        name: "{{ technitium_zone if item.name in ['@', technitium_zone] else (item.name if '.' in item.name else item.name + '.' + technitium_zone) }}"
+        type: "{{ item.type }}"
+        ipAddress: "{{ item.address | default(omit) }}"
+        cname: "{{ (item.target if '.' in item.target else item.target + '.' + technitium_zone) if item.type == 'CNAME' else omit }}"
+        ptr: "{{ item.ptr | default(omit) }}"
+        createPtrZone: "{{ item.create_ptr_zone | default(omit) }}"
+        overwrite: false
+        state: present
+      loop: "{{ technitium_records }}"
+      loop_control:
+        label: "{{ item.name }} {{ item.type }}"

@@ -1,0 +1,41 @@
+---
+# Technitium web console. Do not put the port here; the collection appends technitium_port.
+technitium_url: http://192.168.70.2
+technitium_port: 5380
+technitium_validate_certs: true
+
+technitium_username: admin
+# Factory password. After the first run the playbook uses ansible/technitium/api_token.
+technitium_password: admin
+technitium_token_name: shadowlab-init
+
+# Settings > Proxy & Forwarders. DNS-over-TLS to Cloudflare.
+technitium_forwarders:
+  - "1.1.1.1:853"
+  - "1.0.0.1:853"
+technitium_forwarder_protocol: Tls
+
+technitium_zone: shadowlab.lan
+technitium_use_soa_serial_date_scheme: true
+
+technitium_records:
+  - name: pve
+    type: A
+    address: 192.168.70.1
+    ptr: true
+    create_ptr_zone: true
+  - name: router
+    type: A
+    address: 192.168.70.254
+    ptr: true
+  - name: mgt
+    type: A
+    address: 192.168.70.2
+    ptr: true
+  - name: proxy
+    type: A
+    address: 192.168.70.3
+    ptr: true
+  - name: homepage
+    type: CNAME
+    target: mgt.shadowlab.lan
