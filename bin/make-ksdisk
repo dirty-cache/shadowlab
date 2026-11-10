@@ -1,13 +1,20 @@
 #!/bin/bash
 
+set -o pipefail 
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 
+[ -n "$1" ] || die "no name provided"
+
+cd $(dirname $BASH_SOURCE)
+
 gitdir=$(git rev-parse --show-toplevel)
-oemdisk=$gitdir/iso/kickstart.img
+oemdisk=$gitdir/iso/"$1".img
 
 dd if=/dev/zero of=$oemdisk bs=1M count=8
 mkfs.vfat -n OEMDRV $oemdisk
 sudo mkdir -p /mnt/oemdrv
 sudo mount -o loop $oemdisk /mnt/oemdrv
-sudo cp $gitdir/config/kickstart.cfg /mnt/oemdrv/ks.cfg
+sudo cp $gitdir/linux/rootpass.cfg /mnt/oemdrv/
+sudo cp $gitdir/linux/"$1".cfg /mnt/oemdrv/
+sudo cp $gitdir/linux/kickstart.cfg /mnt/oemdrv/ks.cfg
 sudo umount /mnt/oemdrv

@@ -6,10 +6,18 @@ Technitium is an easy to use, yet feature rich DNS and DHCP server. We will use 
 
 ## Setup
 
-Use Docker to create the Technitium container. Log in to [Technitium](http://192.168.70.2:5380).
+Use Docker to create the Technitium container.
 
+Install the Technitium Ansible collection and run the init playbook from the repo root. On a fresh install the admin password is still `admin`, so set a new one for this run:
 
-On first login, change the password. The username is Admin.
+```
+ansible-galaxy collection install -r ansible/technitium/requirements.yml
+TECHNITIUM_NEW_PASSWORD='choose-one' ansible-playbook ansible/technitium/init.yml
+```
+
+The playbook changes that password, saves an API token to `ansible/technitium/api_token`, then applies the forwarders, the `shadowlab.lan` zone, and the records in `ansible/technitium/defaults.yml`. Later runs reuse the saved token.
+
+The same result, done by hand: log in to [Technitium](http://192.168.70.2:5380). On first login, change the password. The username is admin.
 
 * Settings
     * Proxy & Forwarders

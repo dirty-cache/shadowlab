@@ -5,3 +5,5 @@ firewall-cmd --add-service=dns --permanent
 firewall-cmd --add-port=5380/tcp --permanent
 
 firewall-cmd --reload
+
+firewall-cmd --list-all
