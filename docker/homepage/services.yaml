@@ -55,8 +55,8 @@
 - Shadowlab Fallback:
     - Proxmox:
         icon: proxmox
-        href: https://192.168.70.1:8006
-        ping: 192.168.70.1
+        href: https://192.168.70.11:8006
+        ping: 192.168.70.11
         description: Proxmox (IP) 
     - OPNSense:
         icon: opnsense.png

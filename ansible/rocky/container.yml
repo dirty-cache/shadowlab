@@ -1,0 +1,126 @@
+---
+# Install one compose stack the way bin/install-container does.
+#
+# From the repo root, with root SSH to the VM:
+#
+#   ansible-playbook -i ansible/hosts ansible/rocky/container.yml -e container=homepage -k
+#
+# Copies docker/<container>/ to /opt/docker/<container>/. Files already on the
+# host are left in place and reported. After the copy, the stack is started
+# and postinstall is run when that script exists. postinstall runs second,
+# matching bin/install-container: homepage's script expects the volume that
+# compose creates.
+#
+# Runs only on the docker inventory host (linux/docker.cfg, 192.168.70.5, user root).
+# -k prompts for the SSH password.
+
+- name: Install a container stack
+  hosts: docker
+  gather_facts: true
+  vars:
+    container_src: "{{ playbook_dir }}/../../docker/{{ container }}"
+    container_dest: "/opt/docker/{{ container }}"
+
+  tasks:
+    - name: Require a container name
+      ansible.builtin.assert:
+        that:
+          - container is defined
+          - container is match('^[A-Za-z0-9][A-Za-z0-9_.-]*$')
+        fail_msg: Pass -e container=<name> (letters, digits, dot, underscore, hyphen)
+
+    - name: Confirm this is an RPM host
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.pkg_mgr == 'dnf'
+        fail_msg: Not an RPM based host
+
+    - name: Confirm the stack exists in the repo
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.pipe', 'test -d ' ~ (container_src | quote) ~ ' && echo yes || echo no') == 'yes'
+        fail_msg: "No stack at {{ container_src }}"
+
+    - name: List files in the stack
+      ansible.builtin.set_fact:
+        stack_files: >-
+          {{
+            lookup('ansible.builtin.pipe', 'find ' ~ (container_src | quote) ~ ' -type f')
+            .splitlines() | map('replace', container_src ~ '/', '') | list
+          }}
+
+    - name: Require a compose file
+      ansible.builtin.assert:
+        that:
+          - stack_files | select('search', '(^|/)compose\\.ya?ml$') | list | length > 0
+        fail_msg: "{{ container_src }} has no compose.yaml"
+
+    - name: Check the install directory
+      ansible.builtin.stat:
+        path: "{{ container_dest }}"
+      register: dest_dir
+
+    - name: Refuse to install over a non-directory
+      ansible.builtin.assert:
+        that:
+          - not dest_dir.stat.exists or dest_dir.stat.isdir
+        fail_msg: "{{ container_dest }} exists and is not a directory"
+
+    - name: Create the install directory
+      ansible.builtin.file:
+        path: "{{ container_dest }}"
+        state: directory
+        mode: "0755"
+
+    - name: See which stack files are already installed
+      ansible.builtin.stat:
+        path: "{{ container_dest }}/{{ item }}"
+      loop: "{{ stack_files }}"
+      loop_control:
+        label: "{{ item }}"
+      register: installed
+
+    - name: Warn about files that already exist
+      ansible.builtin.debug:
+        msg: "WARNING: {{ container_dest }}/{{ item.item }} already exists; leaving it in place"
+      loop: "{{ installed.results }}"
+      when: item.stat.exists | default(false)
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Copy stack files that are not already present
+      ansible.builtin.copy:
+        src: "{{ container_src }}/{{ item.item }}"
+        dest: "{{ container_dest }}/{{ item.item }}"
+        mode: preserve
+        force: false
+      loop: "{{ installed.results }}"
+      when: not item.stat.exists
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Start the stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - up
+          - -d
+        chdir: "{{ container_dest }}"
+      register: compose_up
+      changed_when: >-
+        compose_up.stdout is search('Started|Created|Recreated')
+        or compose_up.stderr is search('Started|Created|Recreated')
+
+    - name: Check for postinstall
+      ansible.builtin.stat:
+        path: "{{ container_dest }}/postinstall"
+      register: postinstall
+
+    - name: Run postinstall
+      ansible.builtin.command:
+        argv:
+          - /bin/bash
+          - "{{ container_dest }}/postinstall"
+        chdir: "{{ container_dest }}"
+      when: postinstall.stat.exists
