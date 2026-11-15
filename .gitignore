@@ -6,5 +6,6 @@ config/opnsense/settings.json
 config/opnsense/opnsense.xml
 config/opnsense_apikey*.txt
 linux/id_ansible*
+linux/*.rpm
 __pycache__/
 ansible/proxmox/.venv/

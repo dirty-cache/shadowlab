@@ -16,10 +16,11 @@ sudo mkdir -p /mnt/oemdrv
 sudo mount -o loop $oemdisk /mnt/oemdrv
 sudo cp $gitdir/linux/rootpass.cfg /mnt/oemdrv/
 sudo cp $gitdir/linux/kickstart.cfg /mnt/oemdrv/ks.cfg
-sudo cp $gitdir/linux/"$1".cfg /mnt/oemdrv/settings.cfg
+#sudo cp $gitdir/linux/"$1".cfg /mnt/oemdrv/settings.cfg
 sudo cp $gitdir/linux/id_ansible.pub /mnt/oemdrv/authorized_keys
-sudo cp $gitdir/linux/firstboot-network /mnt/oemdrv/firstboot-network
-sudo cp $gitdir/linux/firstboot-network.sh /mnt/oemdrv/firstboot-network.sh
+sudo cp $gitdir/linux/shadowlab.rpm /mnt/oemdrv/shadowlab.rpm
+#sudo cp $gitdir/linux/firstboot-network /mnt/oemdrv/firstboot-network
+#sudo cp $gitdir/linux/firstboot-network.sh /mnt/oemdrv/firstboot-network.sh
 
 ls -al /mnt/oemdrv
 
