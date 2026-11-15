@@ -55,6 +55,7 @@ We assume there is no DHCP/DNS server (yet) on the network, so we will manually 
 * On the console there should be a login prompt.
 * Login with root and your password
 * If networking is setup correctly, you can also login from a jumphost using ssh
+* A kickstart install copies `linux/firstboot-network` onto the host. On the first root console login, that script runs when the host has no global IPv4 address. It asks for a hostname, then DHCP or a manual address. Manual asks for the IP address (prefix defaults to /24), a DNS server, and a gateway. For this VM use hostname `mgt`, address `192.168.70.2/24`, gateway `192.168.70.254`, and DNS `192.168.70.254`. If the installer already set an address, the script does nothing.
 * run ```dnf update```. Enter Y to install the updates. Enter Y if it asks to approve the Rocky GPG key. This may take a few minutes.
 * Reboot: ```reboot``` or ```shutdown -r now```
 
