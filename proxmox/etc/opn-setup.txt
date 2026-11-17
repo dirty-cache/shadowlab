@@ -1,0 +1,30 @@
+# send root and password
+send root
+send opnsense
+# Set interface IP address
+send 2
+# Select LAN (1)
+send 1
+# Configure IPv4 via DHCP (N)
+send N
+# Enter the LAN IPv4 address
+send 192.168.70.253
+# Enter IPv4 Subnet (24)
+send 24
+# Press ENTER for none
+key_ret
+# IPv6 via WAN tracking (N)
+send N
+# IPv6 via DHCP6 (N)
+send N
+# LAN IPv6 address (ENTER for None)
+key_ret
+# Enable DHCP server on LAN? (N)
+send N
+# Change GUI protocol? (N)
+send N
+# Generate new certificate (N)
+send N
+# Restore defaults (N)
+send N
+

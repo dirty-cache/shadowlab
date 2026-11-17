@@ -1,0 +1,9 @@
+# send root and password
+send root
+send opnsense
+# Update from console (12)
+send 12
+# Proceed (Y)
+send y
+# Logout (0)
+send 0

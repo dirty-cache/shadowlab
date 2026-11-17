@@ -7,8 +7,8 @@
 # ---------------------------------------------------------------------------
 # Usage: vmsetup <VMID> <input-file>
 
-function send_line_to_vm() {
-  echo -e "${DGN}Sending line: ${YW}$1${CL}"
+function send_line() {
+  #echo -e "${DGN}Sending line: ${YW}$1${CL}"
   for ((i = 0; i < ${#1}; i++)); do
     character=${1:i:1}
     case $character in
@@ -81,9 +81,10 @@ VMID=$1; shift
 
 cat "$1" | while read line; do
   case $line in
+    \#*)    echo ${line#\# };;
     sleep*) sleep ${line#sleep } ;;
     key_*)  qm sendkey $VMID ${line#key_} ;;
     wait*)  echo ${line#wait } ; read -r x </dev/tty ;;
-    *)      send_line_to_vm $line ;;
+    send*)  send_line ${line#send } ;;
   esac
 done
