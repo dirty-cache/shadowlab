@@ -1,0 +1,20 @@
+# send username and password
+send installer
+send opnsense
+sleep 5
+# Continue with default keymap
+key_ret
+# Choose UFS
+key_down
+key_ret
+sleep 2
+# Choose 2nd harddisk (8GB target disk)
+key_down
+key_ret
+sleep 2
+key_ret
+# Wait for installer to complete
+wait Wait for completion, then press enter to continue
+key_down
+key_ret
+key_ret

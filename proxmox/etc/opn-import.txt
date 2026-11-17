@@ -1,0 +1,9 @@
+# send username and password
+send root
+send opnsense
+# Shell
+send 8
+# Start importer
+send opnsense-importer cd0
+wait Wait for completion
+send reboot

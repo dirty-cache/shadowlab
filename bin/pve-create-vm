@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+"""
+Author: Bart Sjerps
+Last modified: 2026-11-15
+Purpose: Create a stopped Proxmox VM from config/vms using the Proxmox HTTP API.
+
+Credentials come from ansible/group_vars/pve.yml. The API address is ansible_host
+of pve_target in ansible/hosts. No third-party libraries.
+
+  pve-create-vm docker
+  pve-create-vm docker -c rocky
+  pve-create-vm docker --dry-run
+"""
+
+import argparse
+import json
+import logging
+import ssl
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+LOG = logging.getLogger("pve-create-vm")
+
+
+def repo_root():
+    """Directory that contains config/vms and ansible/group_vars."""
+    here = Path(__file__).resolve().parent
+    for candidate in (here, *here.parents):
+        if (candidate / "config" / "vms").is_dir() and (candidate / "ansible" / "group_vars").is_dir():
+            return candidate
+    raise SystemExit("Cannot find the shadowlab repo (config/vms and ansible/group_vars).")
+
+
+def load_flat(path):
+    """Read a flat key: value file. Comments and a leading --- are ignored."""
+    data = {}
+    text = Path(path).read_text()
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.split(" #", 1)[0].strip()
+        if not line or line.startswith("#") or line == "---":
+            continue
+        if ":" not in line:
+            raise SystemExit(f"{path}:{lineno}: expected key: value")
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        if not key:
+            raise SystemExit(f"{path}:{lineno}: empty key")
+        data[key] = value
+    return data
+
+
+def as_bool(value):
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def require_int(config, key, path):
+    raw = config.get(key, "").strip()
+    if not raw.isdigit() or int(raw) < 1:
+        raise SystemExit(f"{path}: {key} must be a positive integer")
+    return raw
+
+
+def proxmox_hosts(inventory):
+    """Map inventory hostname to ansible_host for the [proxmox] group."""
+    hosts = {}
+    in_group = False
+    for raw in Path(inventory).read_text().splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            in_group = line[1:-1].split(":", 1)[0] == "proxmox"
+            continue
+        if not in_group:
+            continue
+        parts = line.split()
+        name = parts[0]
+        address = name
+        for item in parts[1:]:
+            if item.startswith("ansible_host="):
+                address = item.split("=", 1)[1]
+        hosts[name] = address
+    return hosts
+
+
+def resolve_config(root, name, config_arg):
+    """Match create-vm.yml: relative names live under config/vms, and .yaml is optional."""
+    if config_arg:
+        path = Path(config_arg)
+        if not path.is_absolute():
+            path = root / "config" / "vms" / path
+    else:
+        path = root / "config" / "vms" / name
+    if path.is_dir():
+        path = path / f"{name}.yaml"
+    elif path.suffix.lower() != ".yaml":
+        path = path.with_suffix(path.suffix + ".yaml")
+    if not path.is_file():
+        raise SystemExit(f"Config not found: {path}. Copy config/vms/name.yaml.example.")
+    return path
+
+
+def vm_params(name, vmid, config, path):
+    """Form fields for POST /nodes/{node}/qemu. The VM is left stopped."""
+    nic0 = config.get("nic0", "").strip()
+    storage = config.get("storage", "").strip()
+    iso = config.get("iso", "").strip()
+    if not nic0:
+        raise SystemExit(f"{path}: nic0 is required")
+    if not storage:
+        raise SystemExit(f"{path}: storage is required")
+    if not iso:
+        raise SystemExit(f"{path}: iso is required")
+    disk_gb = require_int(config, "disk_gb", path)
+    params = {
+        "vmid": str(vmid),
+        "name": name,
+        "onboot": "1",
+        "ostype": "l26",
+        "machine": "q35",
+        "agent": "enabled=1",
+        "cpu": "host",
+        "sockets": require_int(config, "sockets", path),
+        "cores": require_int(config, "cores", path),
+        "memory": require_int(config, "memory", path),
+        "scsihw": "virtio-scsi-single",
+        "scsi0": f"{storage}:{disk_gb},serial=boot",
+        "ide2": f"local:iso/{iso},media=cdrom",
+        "boot": "order=scsi0;ide2",
+        "net0": f"virtio,bridge={nic0}",
+        "start": "0",
+    }
+    oemdisk = config.get("oemdisk", "").strip()
+    if oemdisk:
+        params["scsi1"] = f"{storage}:0,import-from=local:import/{oemdisk}"
+    for index in (1, 2):
+        bridge = config.get(f"nic{index}", "").strip()
+        if bridge:
+            params[f"net{index}"] = f"virtio,bridge={bridge}"
+    return params
+
+
+class Proxmox:
+    """Minimal Proxmox API client. Token auth, or a password ticket."""
+
+    def __init__(self, host, port, verify, user, token_name, token_secret, password):
+        self.base = f"https://{host}:{port}/api2/json"
+        self.context = ssl.create_default_context()
+        if not verify:
+            self.context.check_hostname = False
+            self.context.verify_mode = ssl.CERT_NONE
+        self.token = None
+        self.cookie = None
+        self.csrf = None
+        if token_secret:
+            if not token_name:
+                raise SystemExit("pve.yml token_name is required when token_secret is set.")
+            self.token = f"PVEAPIToken={user}!{token_name}={token_secret}"
+        elif password:
+            self._login(user, password)
+        else:
+            raise SystemExit("pve.yml needs pve_token_secret or pve_password.")
+
+    def _login(self, user, password):
+        data = self.request("POST", "/access/ticket", {"username": user, "password": password}, auth=False)
+        self.cookie = data["ticket"]
+        self.csrf = data["CSRFPreventionToken"]
+
+    def request(self, method, path, form=None, auth=True):
+        body = urllib.parse.urlencode(form).encode() if form is not None else None
+        headers = {}
+        if body is not None:
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+        if auth and self.token:
+            headers["Authorization"] = self.token
+        elif auth and self.cookie:
+            headers["Cookie"] = f"PVEAuthCookie={self.cookie}"
+            if method != "GET":
+                headers["CSRFPreventionToken"] = self.csrf
+        req = urllib.request.Request(self.base + path, data=body, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, context=self.context, timeout=60) as resp:
+                payload = json.loads(resp.read().decode())
+        except urllib.error.HTTPError as exc:
+            detail = _http_detail(exc)
+            raise SystemExit(f"Proxmox API {method} {path} failed ({exc.code}): {detail}") from None
+        except urllib.error.URLError as exc:
+            raise SystemExit(f"Proxmox API {method} {path} failed: {exc.reason}") from None
+        if not isinstance(payload, dict) or "data" not in payload:
+            raise SystemExit(f"Proxmox API {method} {path} returned no data")
+        return payload["data"]
+
+    def vm_named(self, name):
+        resources = self.request("GET", "/cluster/resources?type=vm")
+        for item in resources:
+            if item.get("type") == "qemu" and item.get("name") == name:
+                return item
+        return None
+
+    def wait_task(self, node, upid, timeout):
+        """Poll a UPID until it stops. Proxmox create returns the UPID, not the VMID."""
+        quoted = urllib.parse.quote(upid, safe="")
+        node_q = urllib.parse.quote(node, safe="")
+        path = f"/nodes/{node_q}/tasks/{quoted}/status"
+        deadline = time.monotonic() + timeout
+        while True:
+            status = self.request("GET", path)
+            if status.get("status") == "stopped":
+                exitstatus = status.get("exitstatus", "")
+                if exitstatus != "OK":
+                    raise SystemExit(f"Proxmox task failed: {exitstatus or status}")
+                return
+            if time.monotonic() >= deadline:
+                raise SystemExit(f"Proxmox task still running after {timeout}s: {upid}")
+            time.sleep(2)
+
+
+def _http_detail(exc):
+    raw = exc.read().decode(errors="replace")
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw.strip() or exc.reason
+    message = (payload.get("message") or "").strip()
+    errors = payload.get("errors") or {}
+    if errors:
+        detail = "; ".join(f"{key}: {val}" for key, val in errors.items())
+        return f"{message} {detail}".strip()
+    return message or raw.strip() or str(exc.reason)
+
+
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    parser = argparse.ArgumentParser(description="Create a stopped Proxmox VM with the Proxmox API.")
+    parser.add_argument("name", help="VM name. Also selects config/vms/<name>.yaml when --config is omitted.")
+    parser.add_argument("-c", "--config", help="VM config file or directory. Relative names are under config/vms. .yaml is added when omitted.")
+    parser.add_argument("--host", help="API address. Default is ansible_host of pve_target in ansible/hosts.")
+    parser.add_argument("--node", help="Cluster node. Default is pve_node, or the inventory hostname when that is empty.")
+    parser.add_argument("--vmid", type=int, help="VM ID. Default is the next free cluster ID.")
+    parser.add_argument("--timeout", type=int, default=600, help="Seconds to wait for the create task (default 600).")
+    parser.add_argument("--dry-run", action="store_true", help="Print the API parameters and do not call Proxmox.")
+    args = parser.parse_args()
+
+    name = args.name.strip()
+    if not name:
+        raise SystemExit("VM name is required.")
+    if args.timeout < 1:
+        raise SystemExit("--timeout must be a positive integer.")
+
+    root = repo_root()
+    config_path = resolve_config(root, name, args.config)
+    vm = load_flat(config_path)
+    pve_path = root / "ansible" / "group_vars" / "pve.yml"
+    if not pve_path.is_file():
+        raise SystemExit("Copy ansible/group_vars/pve.yml.example to pve.yml.")
+    pve = load_flat(pve_path)
+
+    user = pve.get("pve_user", "root@pam").strip() or "root@pam"
+    token_name = pve.get("pve_token_name", "").strip()
+    token_secret = pve.get("pve_token_secret", "").strip()
+    password = pve.get("pve_password", "")
+    verify = as_bool(pve.get("pve_verify_ssl", "false"))
+    port = pve.get("pve_port", "8006").strip() or "8006"
+    if not port.isdigit():
+        raise SystemExit(f"{pve_path}: pve_port must be an integer")
+
+    hosts = proxmox_hosts(root / "ansible" / "hosts")
+    target = pve.get("pve_target", "").strip()
+    if target and target not in hosts:
+        raise SystemExit(f"Set pve_target in {pve_path} to one host in the proxmox inventory group.")
+    if not target and not args.host:
+        raise SystemExit(f"Set pve_target in {pve_path} to one host in the proxmox inventory group.")
+    host = args.host or hosts[target]
+    node = args.node or pve.get("pve_node", "").strip() or target
+
+    if args.dry_run:
+        params = vm_params(name, args.vmid if args.vmid is not None else "nextid", vm, config_path)
+        LOG.info("dry run %s on %s (%s:%s)", name, node, host, port)
+        json.dump(params, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return
+
+    api = Proxmox(host, port, verify, user, token_name, token_secret, password)
+    existing = api.vm_named(name)
+    if existing:
+        raise SystemExit(f"VM {name} already exists (vmid {existing.get('vmid')} on {existing.get('node')}).")
+    vmid = args.vmid if args.vmid is not None else int(api.request("GET", "/cluster/nextid"))
+    params = vm_params(name, vmid, vm, config_path)
+    node_q = urllib.parse.quote(node, safe="")
+    LOG.info("creating %s vmid %s on %s (%s)", name, vmid, node, host)
+    result = api.request("POST", f"/nodes/{node_q}/qemu", params)
+    if isinstance(result, str) and result.startswith("UPID:"):
+        LOG.info("waiting for %s", result)
+        api.wait_task(node, result, args.timeout)
+    print(vmid)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,9 @@
+# send user and password
+send root
+send opnsense
+# Shell
+send 8
+# Run updater
+send opnsense-update -b -k -p
+wait Wait for completion
+send reboot
