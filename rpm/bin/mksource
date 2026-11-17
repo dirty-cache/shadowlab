@@ -4,5 +4,5 @@ gitdir=$(git rev-parse --show-toplevel)
 
 cd $gitdir/rpm
 
-tar -jcvf ~/rpmbuild/SOURCES/shadowlab-0.1.tbz2 shadowlab
+tar -jcvf ~/SOURCES/shadowlab-0.1.tbz2 shadowlab
 
