@@ -1,5 +1,9 @@
 # FDE Shadow Lab
 
+## Note
+
+This is work in progress and not finished.
+
 ## Description
 
 The Shadow Lab provides a way to quickly setup a small collaboration lab where multiple users (customers and partners) can work together on projects, without requiring direct access to customer network or using public (cloud) services.

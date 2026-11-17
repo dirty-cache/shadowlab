@@ -1,0 +1,91 @@
+#!/bin/bash
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/sbin/qm || die "qm not found (Not a Proxmox host)"
+
+NAME=linux
+DISK_STORAGE=local-lvm
+LAN=vmbr0
+ISO=Rocky-9.8-x86_64-minimal.iso
+
+usage() {
+    echo TBD
+}
+
+create() {
+    vmid=$(pvesh get /cluster/nextid)
+    qm create "$vmid" \
+    --name "$NAME" \
+    --onboot 1 \
+    --ostype l26 \
+    --machine q35 \
+    --agent enabled=1 \
+    --cpu host \
+    --sockets 1 \
+    --cores 2 \
+    --memory 4096 \
+    --scsihw virtio-scsi-single \
+    --scsi0 "${DISK_STORAGE}:32" \
+    --scsi1 "local-lvm:0,import-from=local:import/clean.img.raw" \
+    --ide2 "local:iso/$ISO,media=cdrom" \
+    --boot "order=scsi0;ide2" \
+    --net0 "virtio,bridge=${LAN}"
+
+    #qm start $vmid
+}
+
+destroy() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    qm stop $vmid
+    qm destroy $vmid
+}
+
+install() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    pve-vmsetup $vmid /usr/local/etc/opn-install.txt
+}
+
+update() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    pve-vmsetup $vmid /usr/local/etc/opn-update.txt
+    #qm reboot $vmid
+}
+
+configure() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    qm set $vmid --ide2 local:iso/router.iso,media=cdrom
+    pve-vmsetup $vmid /usr/local/etc/opn-import.txt
+}
+
+cleanup() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    qm set $vmid --ide2 none,media=cdrom
+    qm set $vmid --delete scsi1
+    qm set $vmid --memory 2048
+    qm set $vmid --cores 2
+}
+
+while getopts ":h:n:" OPT; do
+  case "$OPT" in
+  n)   NAME=$OPTARG ;;
+ \?|h) usage ; exit 0 ;;
+  esac
+done
+shift $((OPTIND-1))
+
+action=$1; shift
+
+case $action in
+  create)    create ;;
+  destroy)   destroy ;;
+  install)   install ;;
+  update)    update ;;
+  configure) configure ;;
+  cleanup)   cleanup ;;
+  *)         usage ;;
+esac
