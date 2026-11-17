@@ -41,26 +41,6 @@ destroy() {
     qm destroy $vmid
 }
 
-install() {
-    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
-    test -z $vmid && die "Unknown VM name"
-    pve-vmsetup $vmid /usr/local/etc/opn-install.txt
-}
-
-update() {
-    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
-    test -z $vmid && die "Unknown VM name"
-    pve-vmsetup $vmid /usr/local/etc/opn-update.txt
-    #qm reboot $vmid
-}
-
-configure() {
-    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
-    test -z $vmid && die "Unknown VM name"
-    qm set $vmid --ide2 local:iso/router.iso,media=cdrom
-    pve-vmsetup $vmid /usr/local/etc/opn-import.txt
-}
-
 cleanup() {
     vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
     test -z $vmid && die "Unknown VM name"
@@ -68,6 +48,7 @@ cleanup() {
     qm set $vmid --delete scsi1
     qm set $vmid --memory 2048
     qm set $vmid --cores 2
+    qm set $vmid --delete unused0
 }
 
 while getopts ":h:n:" OPT; do
@@ -83,9 +64,6 @@ action=$1; shift
 case $action in
   create)    create ;;
   destroy)   destroy ;;
-  install)   install ;;
-  update)    update ;;
-  configure) configure ;;
   cleanup)   cleanup ;;
   *)         usage ;;
 esac
