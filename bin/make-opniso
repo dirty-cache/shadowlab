@@ -1,0 +1,14 @@
+#!/bin/bash
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
+gitdir=$(git rev-parse --show-toplevel)
+cd $gitdir
+
+tmpdir=$(mktemp -d /tmp/script.XXXXXX)
+trap 'rm -rf -- "$tmpdir"' EXIT
+
+mkdir $tmpdir/conf
+test -f $gitdir/config/opnsense/router-basic.xml && cp $gitdir/config/opnsense/router-basic.xml $tmpdir/conf/config.xml
+
+genisoimage -allow-lowercase -o iso/router.iso $tmpdir

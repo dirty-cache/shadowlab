@@ -152,7 +152,7 @@
       <enable>1</enable>
       <lock>1</lock>
       <spoofmac/>
-      <ipaddr>192.168.70.254</ipaddr>
+      <ipaddr>192.168.70.253</ipaddr>
       <subnet>24</subnet>
     </lan>
     <lo0>

@@ -21,6 +21,6 @@ test -f $gitdir/iso/$ISO_PROXMOX  || curl https://enterprise.proxmox.com/iso/$IS
 test -f $gitdir/iso/$ISO_OPNSENSE || curl https://pkg.opnsense.org/releases/26.7/${ISO_OPNSENSE}.bz2 -o $gitdir/iso/${ISO_OPNSENSE}.bz2
 test -f $gitdir/iso/$ISO_ROCKY    || curl https://download.rockylinux.org/pub/rocky/9/isos/x86_64/$ISO_ROCKY -o $gitdir/iso/$ISO_ROCKY
 
-echo Unpacking OPNSense image...
+ls -al $gitdir/iso
 
-test -f $gitdir/iso/$ISO_OPNSENSE}.bz2 && bunzip2 $gitdir/iso/${ISO_OPNSENSE}.bz2
+test -f $gitdir/iso/${ISO_OPNSENSE}.bz2 && echo Unpacking OPNSense image... && bunzip2 $gitdir/iso/${ISO_OPNSENSE}.bz2

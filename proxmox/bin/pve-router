@@ -1,7 +1,7 @@
 #!/bin/bash
 
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
-test -x /usr/sbin/qm || die "qm not found"
+test -x /usr/sbin/qm || die "qm not found (Not a Proxmox host)"
 
 NAME=newrouter
 DISK_STORAGE=local-lvm
@@ -9,9 +9,13 @@ LAN=vmbr0
 WAN=vmbr1
 ISO=OPNsense-26.7-dvd-amd64.iso
 
-vmid=$(pvesh get /cluster/nextid)
+usage() {
+    echo TBD
+}
 
-qm create "$vmid" \
+create() {
+    vmid=$(pvesh get /cluster/nextid)
+    qm create "$vmid" \
     --name "$NAME" \
     --onboot 1 \
     --ostype l26 \
@@ -28,4 +32,60 @@ qm create "$vmid" \
     --net0 "virtio,bridge=${LAN}" \
     --net1 "virtio,bridge=${WAN}"
 
-qm start $vmid
+    qm start $vmid
+}
+
+destroy() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    qm stop $vmid
+    qm destroy $vmid
+}
+
+install() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    pve-vmsetup $vmid /usr/local/etc/opn-install.txt
+}
+
+update() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    pve-vmsetup $vmid /usr/local/etc/opn-update.txt
+    #qm reboot $vmid
+}
+
+configure() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    qm set $vmid --ide2 local:iso/router.iso,media=cdrom
+    pve-vmsetup $vmid /usr/local/etc/opn-import.txt
+}
+
+cleanup() {
+    vmid=$(qm list | awk -vname=$NAME '$2==name {print $1}')
+    test -z $vmid && die "Unknown VM name"
+    qm set $vmid --ide2 none,media=cdrom
+    qm set $vmid --memory 1024
+    qm set $vmid --cores 1
+}
+
+while getopts ":h:n:" OPT; do
+  case "$OPT" in
+  n)   NAME=$OPTARG ;;
+ \?|h) usage ; exit 0 ;;
+  esac
+done
+shift $((OPTIND-1))
+
+action=$1; shift
+
+case $action in
+  create)    create ;;
+  destroy)   destroy ;;
+  install)   install ;;
+  update)    update ;;
+  configure) configure ;;
+  cleanup)   cleanup ;;
+  *)         usage ;;
+esac
