@@ -25,8 +25,8 @@ create() {
     --cores 2 \
     --memory 4096 \
     --scsihw virtio-scsi-single \
-    --scsi0 "${DISK_STORAGE}:32" \
-    --scsi1 "local-lvm:0,import-from=local:import/clean.img.raw" \
+    --scsi0 "${DISK_STORAGE}:32,serial=boot" \
+    --scsi1 "${DISK_STORAGE}:0,import-from=local:import/clean.img.raw" \
     --ide2 "local:iso/$ISO,media=cdrom" \
     --boot "order=scsi0;ide2" \
     --net0 "virtio,bridge=${LAN}"
