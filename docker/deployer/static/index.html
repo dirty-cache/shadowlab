@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shadow Lab · Deployer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232dd4bf' stroke-width='1.8'%3E%3Cpath d='M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z'/%3E%3Cpath d='M4 7.5L12 12l8-4.5M12 12v9'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Login (only when DEPLOYER_TOKEN is set) -->
+  <div id="login" class="login hidden">
+    <div class="login-card">
+      <div class="brand brand-lg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="brand-mark">
+          <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M4 7.5L12 12l8-4.5M12 12v9"/>
+        </svg>
+        <span class="brand-text">SHADOWLAB<small>DEPLOYER</small></span>
+      </div>
+      <p class="muted">This deployer is protected. Enter the token.</p>
+      <form id="login-form" autocomplete="off">
+        <input type="password" id="login-token" placeholder="Token" autocomplete="current-password">
+        <button type="submit" class="btn btn-primary">Unlock</button>
+      </form>
+      <p id="login-error" class="error hidden"></p>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="brand-mark">
+          <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M4 7.5L12 12l8-4.5M12 12v9"/>
+        </svg>
+        <span class="brand-text">SHADOWLAB<small>DEPLOYER</small></span>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-head">Docker hosts <span id="host-count" class="count"></span></div>
+        <div id="host-list" class="host-list"></div>
+        <button id="add-host" class="btn btn-ghost btn-block">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Add host
+        </button>
+      </div>
+
+      <div class="sidebar-foot">
+        <div id="foot-version" class="small muted"></div>
+        <button id="logout" class="link hidden">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1 id="tb-title">Projects</h1>
+          <span id="tb-sub" class="muted"></span>
+        </div>
+        <div class="topbar-actions">
+          <label class="switch" title="Auto-refresh every 10 seconds">
+            <input type="checkbox" id="autorefresh" checked><span class="slider"></span>
+            <span class="switch-label">Auto</span>
+          </label>
+          <button id="refresh" class="btn btn-ghost icon-btn" title="Refresh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.34 6.34M20 5v6h-6"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="banner" class="banner hidden"></div>
+      <section id="projects" class="projects"></section>
+    </main>
+  </div>
+
+  <!-- Job console -->
+  <div id="jobconsole" class="jobconsole hidden">
+    <div class="job-head">
+      <span class="job-title" id="job-title"></span>
+      <span id="job-badge" class="badge"></span>
+      <button id="job-close" class="btn btn-ghost icon-btn" title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <pre id="job-output" class="job-output"></pre>
+  </div>
+
+  <!-- Modal + toasts -->
+  <div id="modal-root"></div>
+  <div id="toasts"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

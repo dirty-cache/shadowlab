@@ -1,0 +1,24 @@
+services:
+  deployer:
+    build:
+      context: .
+    image: shadowlab/deployer:${DEPLOYER_TAG:-dev}
+    container_name: deployer
+    restart: unless-stopped
+    ports:
+      - ${COMPOSE_PORT_HTTP:-8080}:8080
+    environment:
+      DEPLOYER_PROJECTS_DIR: /projects
+      DEPLOYER_DATA_DIR: /data
+      DEPLOYER_TOKEN: ${DEPLOYER_TOKEN:-}
+      DEPLOYER_DEFAULT_HOST_NAME: ${DEPLOYER_DEFAULT_HOST_NAME:-lab}
+      DEPLOYER_DEFAULT_DOCKER_HOST: ${DEPLOYER_DEFAULT_DOCKER_HOST:-unix:///var/run/docker.sock}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Deployable stacks: the sibling docker/ folders. Point this at /opt/docker
+      # when deployer itself runs from /opt/docker (see .env.example).
+      - ${DEPLOYER_PROJECTS_HOST:-../}:/projects:ro
+      - deployer-data:/data
+
+volumes:
+  deployer-data:
