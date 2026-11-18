@@ -9,15 +9,20 @@ services:
       - ${COMPOSE_PORT_HTTP:-8080}:8080
     environment:
       DEPLOYER_PROJECTS_DIR: /projects
+      DEPLOYER_INSTALLED_DIR: /installed
       DEPLOYER_DATA_DIR: /data
       DEPLOYER_TOKEN: ${DEPLOYER_TOKEN:-}
       DEPLOYER_DEFAULT_HOST_NAME: ${DEPLOYER_DEFAULT_HOST_NAME:-lab}
       DEPLOYER_DEFAULT_DOCKER_HOST: ${DEPLOYER_DEFAULT_DOCKER_HOST:-unix:///var/run/docker.sock}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      # Deployable stacks: the sibling docker/ folders. Point this at /opt/docker
-      # when deployer itself runs from /opt/docker (see .env.example).
+      # Deployable stacks: the repo's docker/ directory, so every stack in
+      # the repo is discovered (including ones added after this was deployed).
       - ${DEPLOYER_PROJECTS_HOST:-../}:/projects:ro
+      # Installed copies (bin/install-container convention). When a stack is
+      # installed here, compose runs from this copy so its .env and
+      # env_file entries resolve the way a manual install would.
+      - ${DEPLOYER_INSTALLED_HOST:-/opt/docker}:/installed:ro
       - deployer-data:/data
 
 volumes:

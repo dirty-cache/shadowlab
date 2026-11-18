@@ -21,6 +21,11 @@ from collections import deque
 import yaml
 
 PROJECTS_DIR = os.environ.get("DEPLOYER_PROJECTS_DIR", "/projects")
+# Directory with the installed copies (bin/install-container convention:
+# /opt/docker/<name>). When a stack is installed there, compose runs from
+# that copy so per-host .env files and `env_file:` entries resolve the same
+# way a manual `cd /opt/docker/<name> && docker compose up` would.
+INSTALLED_DIR = os.environ.get("DEPLOYER_INSTALLED_DIR", "/installed")
 COMPOSE_FILES = ("compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml")
 JOB_TIMEOUT = int(os.environ.get("DEPLOYER_JOB_TIMEOUT", "1800"))
 NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -94,15 +99,38 @@ def daemon_info(host):
     return out
 
 
-def project_dir(name):
-    """Resolve a project name to its directory, rejecting traversal."""
+def _safe_join(root, name):
+    """Join root/name, rejecting traversal outside root. None if invalid."""
     if not name or not NAME_RE.match(name):
-        raise ValueError("invalid project name")
-    root = os.path.realpath(PROJECTS_DIR)
+        return None
+    root = os.path.realpath(root)
     path = os.path.realpath(os.path.join(root, name))
-    if os.path.dirname(path) != root:
-        raise ValueError("invalid project name")
+    if os.path.dirname(path) != root or not os.path.isdir(path):
+        return None
     return path
+
+
+def project_paths(name):
+    """Locate a stack's compose directory.
+
+    Prefers the installed copy (INSTALLED_DIR/<name>) over the repo
+    checkout (PROJECTS_DIR/<name>), so env resolution matches the
+    install-container convention; falls back to the checkout for stacks
+    added to the repo but not installed yet.
+    """
+    checkout = _safe_join(PROJECTS_DIR, name)
+    installed = None
+    if INSTALLED_DIR:
+        iroot = os.path.realpath(INSTALLED_DIR)
+        if iroot != os.path.realpath(PROJECTS_DIR):
+            cand = _safe_join(INSTALLED_DIR, name)
+            if cand and compose_file(cand):
+                installed = cand
+    if installed:
+        return installed
+    if checkout:
+        return checkout
+    raise ValueError("unknown project")
 
 
 def compose_file(path):
@@ -113,7 +141,7 @@ def compose_file(path):
     return None
 
 
-def _describe(name, path, cf):
+def _describe(name, path, cf, in_repo=True):
     services = []
     has_build = False
     try:
@@ -154,17 +182,17 @@ def _describe(name, path, cf):
         "description": description,
         "services": services,
         "has_build": has_build,
+        "in_repo": in_repo,
         "has_env": os.path.isfile(os.path.join(path, ".env")),
-        "has_env_example": os.path.isfile(os.path.join(path, ".env.example")),
+        "has_env_example": in_repo and os.path.isfile(os.path.join(path, ".env.example")),
     }
 
 
-def list_projects():
-    """Scan PROJECTS_DIR for subdirectories containing a compose file."""
-    projects = []
-    root = os.path.realpath(PROJECTS_DIR)
+def _scan_root(root):
+    found = {}
+    root = os.path.realpath(root)
     if not os.path.isdir(root):
-        return projects
+        return found
     for entry in sorted(os.listdir(root)):
         path = os.path.join(root, entry)
         if not os.path.isdir(path):
@@ -172,7 +200,30 @@ def list_projects():
         cf = compose_file(path)
         if cf is None:
             continue
-        projects.append(_describe(entry, path, cf))
+        found[entry] = (path, cf)
+    return found
+
+
+def list_projects():
+    """Known stacks: the repo checkout (PROJECTS_DIR), plus installed copies
+    of stacks that are no longer in the repo. When a stack exists in both,
+    the installed copy wins — that is where compose runs from, so the env
+    flags reflect the directory that will actually be used."""
+    repo = _scan_root(PROJECTS_DIR)
+    installed = {}
+    if INSTALLED_DIR and os.path.realpath(INSTALLED_DIR) != os.path.realpath(PROJECTS_DIR):
+        installed = _scan_root(INSTALLED_DIR)
+    projects = []
+    for name in sorted(set(repo) | set(installed)):
+        in_repo = name in repo
+        path, cf = installed[name] if name in installed else repo[name]
+        desc = _describe(name, path, cf, in_repo=in_repo)
+        try:
+            run_path = project_paths(name)
+            desc["has_env"] = os.path.isfile(os.path.join(run_path, ".env"))
+        except ValueError:
+            pass
+        projects.append(desc)
     return projects
 
 
@@ -212,11 +263,8 @@ def _container_ports(c):
 
 def project_status(host, name):
     """Run `docker compose ps --format json` on the host; map service -> state."""
-    path = project_dir(name)
-    cf = compose_file(path)
-    if cf is None:
-        raise FileNotFoundError(name)
-    p = run_cli(host, ["compose", "-f", cf, "ps", "--format", "json"], timeout=30)
+    base, _ = compose_base_argv(name)
+    p = run_cli(host, base + ["ps", "--format", "json"], timeout=30)
     if p.returncode != 0:
         err = (p.stderr or p.stdout).strip()
         raise RuntimeError(err.splitlines()[-1] if err else "docker compose ps failed")
@@ -233,13 +281,24 @@ def project_status(host, name):
     return status
 
 
-def compose_argv(name, extra):
-    """Compose CLI args for a project: ['compose', '-f', <file>, ...extra]."""
-    path = project_dir(name)
+def compose_base_argv(name):
+    """Base compose CLI args for a stack.
+
+    `--project-directory` points at the directory that compose will run
+    from, so `env_file:` entries and .env interpolation resolve the same
+    way they do for a manual `cd /opt/docker/<name> && docker compose up`.
+    """
+    path = project_paths(name)
     cf = compose_file(path)
     if cf is None:
         raise FileNotFoundError(name)
-    return ["compose", "-f", cf] + extra, path
+    return ["compose", "-f", cf, "--project-directory", path], path
+
+
+def compose_argv(name, extra):
+    """Compose CLI args for a project: ['compose', '-f', <file>, ..., ...extra]."""
+    base, path = compose_base_argv(name)
+    return base + extra, path
 
 
 class Job:

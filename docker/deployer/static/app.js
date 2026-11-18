@@ -273,6 +273,8 @@ function projectCard(p) {
   const chips = [summary];
   if (!p.has_env && p.has_env_example)
     chips.push('<span class="chip warn" title="This project has a .env.example but no .env — copy it and fill in the values">.env missing</span>');
+  if (!p.in_repo)
+    chips.push('<span class="chip warn" title="Installed on this host but missing from the repo docker/ directory">not in repo</span>');
   if (p.has_build) chips.push('<span class="chip info">build</span>');
   if (p.status_error) chips.push(`<span class="chip err" title="${esc(p.status_error)}">status error</span>`);
 

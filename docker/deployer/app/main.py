@@ -67,7 +67,7 @@ def _host(host_id: str):
 
 def _project(name: str):
     try:
-        path = composeops.project_dir(name)
+        path = composeops.project_paths(name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     cf = composeops.compose_file(path)
@@ -185,8 +185,13 @@ def project_file(name: str):
 @api.get("/projects/{name}/logs")
 def project_logs(name: str, host_id: str, service: str = "", tail: int = 400):
     host = _host(host_id)
-    path, cf, _ = _project(name)
-    argv = ["compose", "-f", cf, "logs", "--tail", str(max(1, min(tail, 2000))), "--no-color"]
+    try:
+        base, _ = composeops.compose_base_argv(name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="not a compose project")
+    argv = base + ["logs", "--tail", str(max(1, min(tail, 2000))), "--no-color"]
     if service:
         argv += ["--service", service]
     try:
