@@ -3,10 +3,14 @@ services:
     image: docker:dind
     container_name: dind
     privileged: true
-    network_mode: host
     restart: unless-stopped
-    # Empty = plain TCP on 2375, no TLS. The dockerd inside listens on the
-    # host network, so add this host to the Deployer as: tcp://<ip>:2375
-    # Fine on the isolated lab network; do not expose this to the internet.
+    # The daemon inside listens on tcp://0.0.0.0:2375; publish it so the
+    # Deployer can add tcp://<host-ip>:2375 as a Docker host.
+    # Keep bridge networking: the inner daemon needs its own network
+    # namespace, or its iptables management clobbers the host's.
+    ports:
+      - 2375:2375
+    # Empty = plain TCP, no TLS. Fine on the isolated lab network;
+    # do not expose this to the internet.
     environment:
       DOCKER_TLS_CERTDIR: ""
