@@ -56,4 +56,23 @@ cd /opt/docker/homepage
 docker compose up -d
 ```
 
-Dockhand is now running on the host, port 3000: [Dockhand](http://192.168.70.2:3000)
+Homepage is now running on the host, port 80: [Homepage](http://192.168.70.2:80)
+
+### Install Deployer
+
+Deployer is a web UI for deploying the compose stacks in this repo to one or
+more Docker hosts. It discovers every stack in the `docker/` directory
+automatically, so new stacks appear without a redeploy.
+
+Run:
+```
+cd /opt/docker/deployer
+docker compose up -d
+```
+
+Deployer is now running on the host, port 8080: [Deployer](http://192.168.70.78:8080)
+
+Additional Docker hosts are added in the UI (Docker hosts panel), e.g.
+`tcp://<ip>:2375` — the `docker/dind` stack provides a second daemon for
+that. A stack whose folder has a `.env.example` needs a `.env` created (and
+filled in) before it can be deployed.
