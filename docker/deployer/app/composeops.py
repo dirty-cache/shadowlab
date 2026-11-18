@@ -252,12 +252,24 @@ def _parse_ps_output(text):
 
 
 def _container_ports(c):
+    """Compose v5 Publishers: URL is the bind address ("0.0.0.0", "::"),
+    ports come from PublishedPort/TargetPort/Protocol."""
     ports = []
+    seen = set()
     for pub in c.get("Publishers") or []:
-        if pub.get("URL"):
-            ports.append(pub["URL"])
-        elif pub.get("PrivatePort"):
-            ports.append(f"{pub['PrivatePort']}/{pub.get('Type', 'tcp')} (internal)")
+        proto = pub.get("Protocol") or "tcp"
+        pub_port = pub.get("PublishedPort")
+        bind = pub.get("URL") or ""
+        if pub_port:
+            if bind not in ("", "0.0.0.0", "::"):
+                entry = f"{bind}:{pub_port}/{proto}"
+            else:
+                entry = f"{pub_port}/{proto}"
+        else:
+            entry = f"{pub.get('TargetPort') or pub.get('PrivatePort')}/{proto} (internal)"
+        if entry not in seen:
+            seen.add(entry)
+            ports.append(entry)
     return ports
 
 
