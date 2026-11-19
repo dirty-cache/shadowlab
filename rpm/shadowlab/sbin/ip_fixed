@@ -1,6 +1,8 @@
 #!/bin/bash
 
-nmcli connection modify enp6s18 \
+NIC=enp6s18
+
+nmcli connection modify $NIC \
 	connection.autoconnect yes \
 	ipv4.method manual \
 	ipv4.addresses 192.168.70.2/24 \
@@ -8,5 +10,5 @@ nmcli connection modify enp6s18 \
 	ipv4.dns 192.168.70.254 \
 	ipv6.method disabled
 
-nmcli connection show enp6s18
+nmcli connection show $NIC
 

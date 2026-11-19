@@ -31,13 +31,18 @@ rm -rf %{buildroot}
 mkdir %{buildroot}
 install -m 0755 -d %{buildroot}/usr/local/sbin
 install -m 0755 -d %{buildroot}/usr/share/%{name}
+install -m 0755 -d %{buildroot}/etc/sudoers.d
 
-cp -p  sbin/*    %{buildroot}/usr/local/sbin
-cp -p  etc/*     %{buildroot}/usr/share/%{name}/
+cp -p  sbin/*               %{buildroot}/usr/local/sbin
+cp -p  etc/sudoers-ansible  %{buildroot}/etc/sudoers.d/
+cp -p  share/*              %{buildroot}/usr/share/%{name}/
 
 %files
 %defattr(0644,root,root,755)
 /usr/share/%{name}
+%ghost /usr/share/%{name}/authorized_keys
+%defattr(0440,root,root,755)
+/etc/sudoers.d/ansible
 %defattr(0755,root,root,755)
 /usr/local/sbin/ip_auto
 /usr/local/sbin/ip_fixed
