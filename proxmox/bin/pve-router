@@ -15,6 +15,8 @@ usage() {
 
 create() {
     vmid=$(pvesh get /cluster/nextid)
+    #   --scsi0 "${DISK_STORAGE}:8" \
+    # --ide2 "local:iso/$ISO,media=cdrom" \
     qm create "$vmid" \
     --name "$NAME" \
     --onboot 1 \
@@ -23,12 +25,12 @@ create() {
     --agent enabled=1 \
     --cpu host \
     --sockets 1 \
-    --cores 2 \
-    --memory 4096 \
+    --cores 1 \
+    --memory 1024 \
     --scsihw virtio-scsi-single \
-    --scsi0 "${DISK_STORAGE}:8" \
-    --ide2 "local:iso/$ISO,media=cdrom" \
-    --boot "order=scsi0;ide2" \
+    --scsi0 "${DISK_STORAGE}:0,import-from=local:import/basic.qcow2" \
+    --ide2 "none,media=cdrom" \
+    --boot "order=scsi0" \
     --net0 "virtio,bridge=${LAN}" \
     --net1 "virtio,bridge=${WAN}"
 
