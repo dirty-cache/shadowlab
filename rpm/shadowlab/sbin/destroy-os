@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 # ===========================================================================
 # Title       : destroy-os
 # Description : Wipe the start of /dev/sda and power off (lab teardown)
