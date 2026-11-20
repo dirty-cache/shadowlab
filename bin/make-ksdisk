@@ -4,26 +4,25 @@ set -o pipefail
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 
 [ -n "$1" ] || die "no name provided"
+command -v mcopy >/dev/null || die "mcopy not found (install mtools)"
 
 cd $(dirname $BASH_SOURCE)
 
 gitdir=$(git rev-parse --show-toplevel)
 oemdisk=$gitdir/iso/"$1".img
 
+rm -f $oemdisk
 dd if=/dev/zero of=$oemdisk bs=1M count=8 status=none
 mkfs.vfat -n OEMDRV $oemdisk
-sudo mkdir -p /mnt/oemdrv
-sudo mount -o loop $oemdisk /mnt/oemdrv
-sudo cp $gitdir/linux/rootpass.cfg /mnt/oemdrv/
-sudo cp $gitdir/linux/kickstart.cfg /mnt/oemdrv/ks.cfg
-sudo cp $gitdir/linux/"$1".cfg /mnt/oemdrv/settings.cfg
-sudo cp $gitdir/linux/id_ansible.pub /mnt/oemdrv/authorized_keys
-sudo cp $gitdir/linux/shadowlab.rpm /mnt/oemdrv/shadowlab.rpm
-#sudo cp $gitdir/linux/firstboot-network /mnt/oemdrv/firstboot-network
-#sudo cp $gitdir/linux/firstboot-network.sh /mnt/oemdrv/firstboot-network.sh
 
-ls -al /mnt/oemdrv
+mcopy -i $oemdisk $gitdir/linux/rootpass.cfg ::rootpass.cfg
+mcopy -i $oemdisk $gitdir/linux/kickstart.cfg ::ks.cfg
+mcopy -i $oemdisk $gitdir/linux/"$1".cfg ::settings.cfg
+#mcopy -i $oemdisk $gitdir/linux/id_ansible.pub ::authorized_keys
+mcopy -i $oemdisk $gitdir/linux/shadowlab*.rpm ::shadowlab.rpm
+#mcopy -i $oemdisk $gitdir/linux/firstboot-network ::firstboot-network
+#mcopy -i $oemdisk $gitdir/linux/firstboot-network.sh ::firstboot-network.sh
 
-sudo umount /mnt/oemdrv
+mdir -i $oemdisk
 
 ls -al $gitdir/iso
