@@ -18,10 +18,8 @@ mkfs.vfat -n OEMDRV $oemdisk
 mcopy -i $oemdisk $gitdir/linux/rootpass.cfg ::rootpass.cfg
 mcopy -i $oemdisk $gitdir/linux/kickstart.cfg ::ks.cfg
 mcopy -i $oemdisk $gitdir/linux/"$1".cfg ::settings.cfg
-#mcopy -i $oemdisk $gitdir/linux/id_ansible.pub ::authorized_keys
+
 mcopy -i $oemdisk $gitdir/linux/shadowlab*.rpm ::shadowlab.rpm
-#mcopy -i $oemdisk $gitdir/linux/firstboot-network ::firstboot-network
-#mcopy -i $oemdisk $gitdir/linux/firstboot-network.sh ::firstboot-network.sh
 
 mdir -i $oemdisk
 

@@ -1,13 +1,13 @@
 Name:      shadowlab
 Summary:   Shadowlab Addons
+BuildArch: noarch
 Version:   0.1
 Release:   %{date}
-License:   Private
+License:   GPLv3+
 Group:     System Environment/Base
 Source0:   %{name}-%{version}.tbz2
 
 %global debug_package %{nil}
-
 
 %description
 Some helper scripts and settings for Shadowlab
@@ -23,8 +23,7 @@ die() { echo "[die] $@" >&2 ; exit 1 ; }
 ROOTPW=$(getent shadow | awk -F: '$1=="root" {print $2}')
 
 getent group ansible >/dev/null || groupadd -r -g 900 ansible || die "adding group ansible"
-getent passwd ansible >/dev/null \
-  || useradd -r -m -u 900 -g ansible -G wheel -c "Ansible" -p $ROOTPW || die "creating user ansible"
+getent passwd ansible >/dev/null || useradd -r -m -u 900 -g ansible -G wheel -c "Ansible" -p $ROOTPW || die "creating user ansible"
 
 %install
 rm -rf %{buildroot}

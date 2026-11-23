@@ -1,8 +1,9 @@
 Name:      shadowlab-deps
 Summary:   Shadowlab dependencies
+BuildArch: noarch
 Version:   0.1
 Release:   %{date}
-License:   Private
+License:   GPLv3+
 Group:     System Environment/Base
 
 %global debug_package %{nil}
