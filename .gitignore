@@ -7,5 +7,6 @@ config/opnsense/opnsense.xml
 config/opnsense/settings.json
 iso/*
 linux/*.rpm
+linux/*.gz
 linux/id_ansible*
 tmp/*

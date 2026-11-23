@@ -17,6 +17,7 @@ mkfs.vfat -n OEMDRV $oemdisk
 
 mcopy -i $oemdisk $gitdir/linux/rootpass.cfg ::rootpass.cfg
 mcopy -i $oemdisk $gitdir/linux/kickstart.cfg ::ks.cfg
+mcopy -i $oemdisk $gitdir/linux/shadowlab.tar.gz ::shadowlab.tar.gz
 mcopy -i $oemdisk $gitdir/linux/"$1".cfg ::settings.cfg
 
 mcopy -i $oemdisk $gitdir/linux/shadowlab*.rpm ::shadowlab.rpm

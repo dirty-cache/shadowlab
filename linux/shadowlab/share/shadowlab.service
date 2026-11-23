@@ -1,0 +1,11 @@
+[Unit]
+Description=Shadowlab postinstaller at first boot
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/shadowlab/sbin/shadowlab-firstboot
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target

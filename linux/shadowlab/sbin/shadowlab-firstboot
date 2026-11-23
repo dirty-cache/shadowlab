@@ -1,0 +1,23 @@
+#!/bin/bash
+# ===========================================================================
+# Title       : shadowlab-firstboot
+# Description : Open a postinstall session on tty8
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-23
+# ---------------------------------------------------------------------------
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
+# Don't run if homelab is already installed
+test -f /etc/firstrun || exit
+
+sleep 10
+
+ip -4 route get 1.1.1.1 &>/dev/null || die "No internet access (no DHCP?)"
+
+# Prevent openvt "could not deallocate" issue by redirecting stdin and stderr
+exec 1>/dev/null
+exec 2>/dev/null
+
+# open postinstall on tty8
+openvt -c 8 -w -f -s /opt/shadowlab/bin/postinstall && rm /etc/firstrun

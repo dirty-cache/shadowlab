@@ -1,0 +1,12 @@
+#!/bin/bash
+# ===========================================================================
+# Title       : postinstall
+# Description : Run post OS install commands
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-23
+# ---------------------------------------------------------------------------
+dnf -y install git epel-release qemu-guest-agent
+dnf -y update
+
+cat /opt/shadowlab/etc/packages.txt | xargs dnf -y install 
+

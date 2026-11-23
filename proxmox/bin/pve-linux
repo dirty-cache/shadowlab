@@ -8,6 +8,7 @@ DISK_STORAGE=local-lvm
 LAN=vmbr0
 ISO=Rocky-9.8-x86_64-minimal.iso
 KS=clean
+NOSTART=
 
 usage() {
     echo TBD
@@ -32,7 +33,14 @@ create() {
     --boot "order=scsi0;ide2" \
     --net0 "virtio,bridge=${LAN}"
 
-    #qm start $vmid
+    test -z $NOSTART || return
+    qm start $vmid
+    echo Sleeping 10 seconds to allow startup....
+    sleep 10
+    echo Sending keystrokes...
+    qm sendkey $vmid up
+    qm sendkey $vmid ret
+    echo Done.
 }
 
 destroy() {
@@ -52,10 +60,11 @@ cleanup() {
     qm set $vmid --delete unused0
 }
 
-while getopts ":h:c:n:" OPT; do
+while getopts ":h:c:n:s" OPT; do
   case "$OPT" in
-  n)   NAME=$OPTARG ;;
   c)   KS=$OPTARG ;;
+  s)   NOSTART=1 ;;
+  n)   NAME=$OPTARG ;;
  \?|h) usage ; exit 0 ;;
   esac
 done

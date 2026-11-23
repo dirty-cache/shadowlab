@@ -6,6 +6,8 @@
 # Date        : 2026-08-06
 # ---------------------------------------------------------------------------
 
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
 test -f /etc/yum.repos.d/docker-ce-stable.repo || cp /usr/share/shadowlab/docker-ce-stable.repo /etc/yum.repos.d/docker-ce-stable.repo
 
 dnf -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
