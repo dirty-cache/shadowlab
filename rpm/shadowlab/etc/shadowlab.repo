@@ -1,0 +1,6 @@
+[shadowlab]
+name=Shadowlab Repo
+baseurl=https://yum.dutchfde.nl/base
+skip_if_unavailable=true
+enabled=1
+gpgcheck=0

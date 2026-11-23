@@ -35,7 +35,7 @@ install -m 0755 -d %{buildroot}/etc/yum.repos.d
 install -m 0755 -d %{buildroot}/etc/sudoers.d
 
 cp -p  sbin/*               %{buildroot}/usr/local/sbin
-cp -p  etc/docker-ce-stable.repo %{buildroot}/etc/yum.repos.d/
+cp -p  etc/*.repo           %{buildroot}/etc/yum.repos.d/
 cp -p  etc/sudoers-ansible  %{buildroot}/etc/sudoers.d/ansible
 cp -p  share/*              %{buildroot}/usr/share/%{name}/
 
@@ -44,6 +44,7 @@ cp -p  share/*              %{buildroot}/usr/share/%{name}/
 /usr/share/%{name}
 %ghost /usr/share/%{name}/authorized_keys
 %defattr(0440,root,root,755)
+/etc/yum.repos.d/shadowlab.repo
 /etc/yum.repos.d/docker-ce-stable.repo
 /etc/sudoers.d/ansible
 %defattr(0755,root,root,755)
