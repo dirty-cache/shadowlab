@@ -17,8 +17,8 @@ services:
       - data:/data
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - '4000:3000'
-      - '192.168.70.4:22:22'
+      - '3003:3000'
+      - '222:22'
     # update cert:
     # docker exec forgejo exec /usr/sbin/update-ca-certificates
 
