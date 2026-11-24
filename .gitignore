@@ -12,3 +12,4 @@ linux/*.rpm
 linux/*.gz
 linux/id_ansible*
 tmp/*
+.env

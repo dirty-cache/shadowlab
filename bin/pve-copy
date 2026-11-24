@@ -1,7 +1,12 @@
 #!/bin/bash
 
-gitdir=$(git rev-parse --show-toplevel)
-pvehost=192.168.70.11
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 
-rsync -ai $gitdir/proxmox/bin/* root@$pvehost:/usr/local/bin/
-rsync -ai $gitdir/proxmox/etc/* root@$pvehost:/usr/local/etc/
+gitdir=$(git rev-parse --show-toplevel)
+
+source $gitdir/.env
+
+test -z $PVEHOST && die "pvehost not set"
+
+rsync -ai $gitdir/proxmox/bin/* root@${PVEHOST}:/usr/local/bin/
+rsync -ai $gitdir/proxmox/etc/* root@${PVEHOST}:/usr/local/etc/

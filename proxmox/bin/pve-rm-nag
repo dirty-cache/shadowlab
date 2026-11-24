@@ -1,4 +1,15 @@
 #!/bin/sh
+# ===========================================================================
+# Title       : rm-nag
+# Description : Removes the nag message when logging in to Proxmox
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-28
+# ---------------------------------------------------------------------------
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
+test -x /usr/sbin/qm || die "qm not found (Not a Proxmox host)"
+
 WEB_JS=/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
 if [ -s "$WEB_JS" ] && ! grep -q NoMoreNagging "$WEB_JS"; then
     echo "Patching Web UI nag..."

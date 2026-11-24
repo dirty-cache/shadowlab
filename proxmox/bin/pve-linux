@@ -1,4 +1,10 @@
 #!/bin/bash
+# ===========================================================================
+# Title       : pve-linux
+# Description : Create a VM on Proxmox for running Rocky Linux
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-28
+# ---------------------------------------------------------------------------
 
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 test -x /usr/sbin/qm || die "qm not found (Not a Proxmox host)"
@@ -11,7 +17,24 @@ KS=clean
 AUTO=0
 
 usage() {
-    echo TBD
+    cat <<EOF
+Usage: $(basename "$0") [-n name] [-c kickstart] [-a] {create|destroy|cleanup}
+
+Create, destroy, or clean up a Rocky Linux VM on this Proxmox host.
+
+Options:
+  -n name        VM name (default: linux)
+  -c kickstart   Kickstart image under local:import/ (default: clean,
+                 i.e. local:import/clean.img.raw)
+  -a             After create, start the VM and send Up+Enter
+  -h             Show this help
+
+Actions:
+  create         Next free VMID: 2 cores, 4096 MiB, 32 GiB boot disk on
+                 local-lvm, kickstart disk, $ISO, virtio NIC on $LAN
+  destroy        Stop and destroy the VM named with -n
+  cleanup        Detach the ISO and kickstart disk, set 2 cores / 2048 MiB
+EOF
 }
 
 create() {

@@ -1,22 +1,45 @@
 #!/bin/bash
+# ===========================================================================
+# Title       : pve-router
+# Description : Create a VM on Proxmox for running OPNSense Router
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-28
+# ---------------------------------------------------------------------------
 
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 test -x /usr/sbin/qm || die "qm not found (Not a Proxmox host)"
 
-NAME=newrouter
+NAME=router
 DISK_STORAGE=local-lvm
 LAN=vmbr0
 WAN=vmbr1
 ISO=OPNsense-26.7-dvd-amd64.iso
 
 usage() {
-    echo TBD
+    cat <<EOF
+Usage: $(basename "$0") [-n name] {create|destroy|install|update|configure|cleanup}
+
+Create and set up an OPNsense router VM on this Proxmox host.
+
+Options:
+  -n name     VM name (default: router)
+  -h          Show this help
+
+Actions:
+  create      Next free VMID: 1 core, 1024 MiB, disk imported from
+              local:import/basic.qcow2 onto $DISK_STORAGE, virtio NICs on
+              $LAN (LAN) and $WAN (WAN), then start
+  destroy     Stop and destroy the VM named with -n
+  install     Run pve-vmsetup with /usr/local/etc/opn-install.txt
+  update      Run pve-vmsetup with /usr/local/etc/opn-update.txt
+  configure   Attach local:iso/router.iso and run pve-vmsetup with
+              /usr/local/etc/opn-import.txt
+  cleanup     Detach the ISO and set 1 core / 1024 MiB
+EOF
 }
 
 create() {
     vmid=$(pvesh get /cluster/nextid)
-    #   --scsi0 "${DISK_STORAGE}:8" \
-    # --ide2 "local:iso/$ISO,media=cdrom" \
     qm create "$vmid" \
     --name "$NAME" \
     --onboot 1 \
