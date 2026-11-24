@@ -4,7 +4,7 @@ services:
     container_name: dockhand
     restart: unless-stopped
     ports:
-      - ${COMPOSE_PORT_HTTP:-3000}:3000
+      - 3001:3000
     environment:
       DATABASE_URL: ${DATABASE_URL}
       DISABLE_LOCAL_LOGIN: ${DISABLE_LOCAL_LOGIN:-false}

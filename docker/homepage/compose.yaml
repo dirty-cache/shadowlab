@@ -4,13 +4,14 @@ services:
     restart: unless-stopped
     container_name: homepage
     ports:
-      - ${COMPOSE_PORT_HTTP:-80}:3000
+      - 3002:3000
     volumes:
       - config:/app/config
       - icons:/app/public/icons
       - /var/run/docker.sock:/var/run/docker.sock:ro # (optional) For docker integrations
-    env_file:
-      - homepage.env
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: "homepage.admin.shadowlab.lan,homepage.shadowlab.lan,192.168.70.2,homepage.shadow.lab"
+      HOMEPAGE_VAR_NAME: "Management"
 
 volumes:
     config:

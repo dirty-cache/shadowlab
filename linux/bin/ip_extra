@@ -1,0 +1,27 @@
+#!/bin/bash
+# ===========================================================================
+# Title       : ip_auto
+# Description : Set the default interface to use DHCP (auto)
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-23
+# ---------------------------------------------------------------------------
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
+NIC=enp6s20
+IPADDR=192.168.70.2
+
+ip link show $NIC &>/dev/null || die "Nic $NIC not found"
+
+network_proxy() {
+    nmcli connection modify $NIC \
+        connection.autoconnect yes \
+        ipv4.method manual \
+        ipv4.addresses ${IPADDR}/24 \
+        ipv6.method disabled
+}
+
+network_proxy
+
+nmcli connection show $NIC
+

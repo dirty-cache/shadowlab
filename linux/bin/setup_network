@@ -9,6 +9,7 @@
 die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 
 NIC=enp6s18
+NIC2=enp6s19
 GATEWAY=192.168.70.254
 DNS=192.168.70.254
 DOMAIN=shadowlab.lan
@@ -34,10 +35,21 @@ network_fixed() {
         ipv4.dns ${DNS} \
         ipv4.dns-search ${DOMAIN} \
         ipv6.method disabled
+
+    nmcli connection show $NIC
+}
+
+network_proxy() {
+    nmcli connection modify $NIC2 \
+        connection.autoconnect yes \
+        ipv4.method manual \
+        ipv4.addresses 192.168.70.2/24 \
+        ipv6.method disabled
+    nmcli connection show $NIC2
 }
 
 case $serial in
-  docker01) IPADDR=192.168.70.12 ; network_fixed ;;
+  docker01) IPADDR=192.168.70.12 ; network_fixed ; network_proxy ;;
   *)        network_dhcp ;;
 esac
 

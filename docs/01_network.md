@@ -19,3 +19,15 @@ See the [network diagram](diagram.md) for how these systems connect.
 | Router         | 192.168.70.254  | router.shadowlab.lan   | OPNSense router | |
 
 
+## Docker Ports
+
+| Port  	     | Application     | Notes | 
+|---             |---              |--- |
+| 80             | NPM HTTP        | |
+| 81             | NPM Admin       | |
+| 443            | NPM HTTPS       | |
+| 3001           | Dockhand        | |
+| 3002           | Homepage        | |
+| 3003           | Forgejo         | Also port 22 |
+| 5432           | Postgres        | |
+ 
