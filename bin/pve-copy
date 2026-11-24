@@ -4,7 +4,7 @@ die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 
 gitdir=$(git rev-parse --show-toplevel)
 
-source $gitdir/.env
+source $gitdir/config/.env
 
 test -z $PVEHOST && die "pvehost not set"
 
