@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+"""
+Author: Bart Sjerps
+Last modified: 2026-11-24
+Purpose: Write an OPNsense config from router-basic.xml with the lab domain, LAN address, and root password.
+"""
+
+import argparse
+import getpass
+import ipaddress
+import logging
+import secrets
+import shutil
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+log = logging.getLogger("opn-config")
+
+
+def load_env(path: Path) -> dict[str, str]:
+    """Return KEY/VALUE pairs, skipping comments and blank lines. Later keys win."""
+    items = {}
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key:
+            items[key] = value.strip()
+    return items
+
+
+def env_settings(root: Path) -> dict[str, str]:
+    """Load config/.env, or config/.env.example when the real file is absent."""
+    config = root / "config"
+    env_path = config / ".env"
+    example_path = config / ".env.example"
+    source = env_path if env_path.is_file() else example_path
+    if not source.is_file():
+        log.error("missing %s", example_path)
+        raise SystemExit(1)
+    return load_env(source)
+
+
+def require_command(name: str, package: str) -> None:
+    """Exit if a required external command is not on PATH."""
+    if shutil.which(name) is None:
+        log.error("%s not found (install %s)", name, package)
+        raise SystemExit(1)
+
+
+def hash_password(password: str) -> str:
+    """Hash a password as argon2id with the parameters OPNsense stores (m=65536, t=4, p=1)."""
+    if not password:
+        log.error("password is empty")
+        raise SystemExit(1)
+    require_command("argon2", "the argon2 package")
+    # 16 hex chars; the argon2 CLI uses this string as the salt.
+    salt = secrets.token_hex(8)
+    result = subprocess.run(
+        ["argon2", salt, "-id", "-t", "4", "-m", "16", "-p", "1", "-l", "32", "-e"],
+        input=password,
+        text=True,
+        capture_output=True,
+    )
+    hashed = next((line.strip() for line in result.stdout.splitlines() if line.startswith("$argon2id$")), "")
+    if result.returncode != 0 or not hashed.startswith("$argon2id$v=19$m=65536,t=4,p=1$"):
+        log.error("argon2 failed: %s", result.stderr.strip() or result.stdout.strip())
+        raise SystemExit(1)
+    return hashed
+
+
+def parse_lan(value: str) -> tuple[ipaddress.IPv4Address, int | None]:
+    """Parse an IPv4 LAN address. A CIDR prefix is returned separately so a bare address can keep the template prefix."""
+    try:
+        if "/" in value:
+            iface = ipaddress.ip_interface(value)
+            if not isinstance(iface.ip, ipaddress.IPv4Address):
+                raise ValueError("LAN address must be IPv4")
+            if iface.ip in (iface.network.network_address, iface.network.broadcast_address):
+                raise ValueError("LAN address must be a host address")
+            return iface.ip, iface.network.prefixlen
+        addr = ipaddress.ip_address(value)
+    except ValueError as exc:
+        log.error("invalid LAN address %s: %s", value, exc)
+        raise SystemExit(1) from exc
+    if not isinstance(addr, ipaddress.IPv4Address):
+        log.error("LAN address must be IPv4")
+        raise SystemExit(1)
+    return addr, None
+
+
+def ipv4_network(addr: ipaddress.IPv4Address, prefix: int) -> ipaddress.IPv4Network:
+    """Build the network that contains addr at the given prefix."""
+    try:
+        network = ipaddress.ip_network(f"{addr}/{prefix}", strict=False)
+    except ValueError as exc:
+        log.error("invalid LAN prefix /%s: %s", prefix, exc)
+        raise SystemExit(1) from exc
+    if not isinstance(network, ipaddress.IPv4Network):
+        log.error("LAN address must be IPv4")
+        raise SystemExit(1)
+    if addr in (network.network_address, network.broadcast_address):
+        log.error("LAN address %s is not a host in %s", addr, network)
+        raise SystemExit(1)
+    return network
+
+
+def remap_host(addr: ipaddress.IPv4Address, old: ipaddress.IPv4Network, new: ipaddress.IPv4Network) -> str:
+    """Keep a host's offset from the old LAN network when moving it into the new one."""
+    if addr not in old:
+        log.error("%s is outside the template LAN network %s", addr, old)
+        raise SystemExit(1)
+    offset = int(addr) - int(old.network_address)
+    if offset <= 0 or offset >= new.num_addresses - 1:
+        log.error("host offset %s does not fit in %s", offset, new)
+        raise SystemExit(1)
+    return str(ipaddress.IPv4Address(int(new.network_address) + offset))
+
+
+def child(parent: ET.Element, tag: str) -> ET.Element:
+    """Return a required child element."""
+    element = parent.find(tag)
+    if element is None:
+        log.error("config is missing <%s> under <%s>", tag, parent.tag)
+        raise SystemExit(1)
+    return element
+
+
+def set_domain(root: ET.Element, domain: str) -> None:
+    """Set the system domain and any Unbound forward that still uses the previous one."""
+    if not domain or any(c.isspace() for c in domain):
+        log.error("domain is empty or contains whitespace")
+        raise SystemExit(1)
+    system_domain = child(child(root, "system"), "domain")
+    old = system_domain.text or ""
+    system_domain.text = domain
+    updated = 0
+    for dot in root.findall("OPNsense/unboundplus/dots/dot"):
+        element = dot.find("domain")
+        if element is not None and element.text == old:
+            element.text = domain
+            updated += 1
+    log.info("domain %s -> %s (%d Unbound forward)", old, domain, updated)
+
+
+def set_lan(root: ET.Element, addr: ipaddress.IPv4Address, prefix: int | None) -> None:
+    """Set the LAN address and, when the network changes, the DHCP range and Tailscale subnet."""
+    lan = child(child(root, "interfaces"), "lan")
+    ip_el = child(lan, "ipaddr")
+    subnet_el = child(lan, "subnet")
+    try:
+        old_addr = ipaddress.IPv4Address(ip_el.text or "")
+        old_prefix = int(subnet_el.text or "")
+    except ValueError as exc:
+        log.error("template LAN address is not IPv4: %s", exc)
+        raise SystemExit(1) from exc
+    new_prefix = old_prefix if prefix is None else prefix
+    old_net = ipv4_network(old_addr, old_prefix)
+    new_net = ipv4_network(addr, new_prefix)
+    ip_el.text = str(addr)
+    subnet_el.text = str(new_prefix)
+    log.info("LAN %s/%s -> %s/%s", old_addr, old_prefix, addr, new_prefix)
+
+    for rng in root.findall("dnsmasq/dhcp_ranges"):
+        for tag in ("start_addr", "end_addr"):
+            element = rng.find(tag)
+            if element is None or not element.text:
+                continue
+            current = ipaddress.IPv4Address(element.text)
+            element.text = remap_host(current, old_net, new_net)
+            log.info("DHCP %s %s -> %s", tag, current, element.text)
+
+    old_subnet = str(old_net)
+    new_subnet = str(new_net)
+    for element in root.findall("OPNsense/tailscale/settings/subnets/subnet4/subnet"):
+        if element.text == old_subnet:
+            element.text = new_subnet
+            log.info("Tailscale subnet %s -> %s", old_subnet, new_subnet)
+
+
+def set_root_password(root: ET.Element, hashed: str) -> None:
+    """Store an argon2id hash on the root user. The plaintext password is not written."""
+    for user in child(root, "system").findall("user"):
+        if user.findtext("name") != "root":
+            continue
+        child(user, "password").text = hashed
+        log.info("updated root password hash")
+        return
+    log.error("config has no root user")
+    raise SystemExit(1)
+
+
+def write_config(tree: ET.ElementTree, path: Path) -> None:
+    """Write the config with an XML declaration."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tree.write(path, encoding="unicode", xml_declaration=True)
+    text = path.read_text()
+    if not text.endswith("\n"):
+        path.write_text(text + "\n")
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    parser = argparse.ArgumentParser(description="Customize an OPNsense config with the lab domain, LAN address, and root password.")
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent, help="repository root (default: parent of this script)")
+    parser.add_argument("--input", type=Path, help="template config (default: opnsense/router-basic.xml)")
+    parser.add_argument("--output", type=Path, help="generated config (default: config/opnsense/router-basic.xml)")
+    parser.add_argument("--domain", help="system domain (default: DOMAIN from config/.env)")
+    parser.add_argument("--lan-ip", help="LAN address, optional /prefix (default: GATEWAY from config/.env)")
+    parser.add_argument("--password", help="root password (prompted when omitted)")
+    args = parser.parse_args()
+
+    root = args.root.resolve()
+    source = args.input if args.input is not None else Path("opnsense/router-basic.xml")
+    dest = args.output if args.output is not None else Path("config/opnsense/router-basic.xml")
+    if not source.is_absolute():
+        source = root / source
+    if not dest.is_absolute():
+        dest = root / dest
+    if not source.is_file():
+        log.error("missing %s", source)
+        raise SystemExit(1)
+
+    domain = args.domain
+    lan_ip = args.lan_ip
+    if domain is None or lan_ip is None:
+        settings = env_settings(root)
+        if domain is None:
+            domain = settings.get("DOMAIN", "")
+        if lan_ip is None:
+            lan_ip = settings.get("GATEWAY", "")
+    if not domain:
+        log.error("domain is not set (pass --domain or set DOMAIN in config/.env)")
+        raise SystemExit(1)
+    if not lan_ip:
+        log.error("LAN address is not set (pass --lan-ip or set GATEWAY in config/.env)")
+        raise SystemExit(1)
+
+    password = args.password
+    if password is None:
+        password = getpass.getpass("Root password: ")
+    hashed = hash_password(password)
+
+    addr, prefix = parse_lan(lan_ip)
+    tree = ET.parse(source)
+    config = tree.getroot()
+    set_domain(config, domain)
+    set_lan(config, addr, prefix)
+    set_root_password(config, hashed)
+    write_config(tree, dest)
+    log.info("wrote %s", dest)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

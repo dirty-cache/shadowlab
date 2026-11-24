@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""
+Author: Bart Sjerps
+Last modified: 2026-11-24
+Purpose: Confirm Shadowlab settings in config/.env, optionally set the kickstart root password, and create an SSH key.
+"""
+
+import argparse
+import logging
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+log = logging.getLogger("setup")
+
+# Defaults used when config/.env does not exist yet.
+DEFAULTS = [
+    ("NETWORK", "192.168.70.0"),
+    ("DOMAIN", "shadowlab.lan"),
+    ("GATEWAY", "192.168.70.253"),
+    ("PVEHOST", "192.168.70.11"),
+]
+
+
+def load_env(path: Path) -> list[tuple[str, str]]:
+    """Return KEY/VALUE pairs in file order, skipping comments and blank lines."""
+    items = []
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key:
+            continue
+        items.append((key, value.strip()))
+    return items
+
+
+def write_env(path: Path, items: list[tuple[str, str]]) -> None:
+    """Write config/.env with a short header and the confirmed settings."""
+    lines = ["# Shadowlab config", ""]
+    lines.extend(f"{key}={value}" for key, value in items)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n")
+
+
+def require_command(name: str, package: str) -> None:
+    """Exit if a required external command is not on PATH."""
+    if shutil.which(name) is None:
+        log.error("%s not found (install %s)", name, package)
+        raise SystemExit(1)
+
+
+def dialog_values(items: list[tuple[str, str]]) -> list[str] | None:
+    """Show a mixed form. Return field values, or None when the user cancels."""
+    labels = [key for key, _ in items] + ["ROOT_PASSWORD"]
+    values = [value for _, value in items] + [""]
+    label_width = max(len(label) for label in labels)
+    field_x = label_width + 2
+    field_len = max(24, *(len(value) for value in values))
+    input_len = max(field_len, 128)
+    form_height = len(labels)
+    height = form_height + 8
+    width = field_x + field_len + 4
+    command = [
+        "dialog",
+        "--stdout",
+        "--insecure",
+        "--title",
+        "Shadowlab setup",
+        "--ok-label",
+        "Confirm",
+        "--cancel-label",
+        "Cancel",
+        "--mixedform",
+        "Confirm settings. Leave the password empty to keep the current root password.",
+        str(height),
+        str(width),
+        str(form_height),
+    ]
+    for row, (label, value) in enumerate(zip(labels, values), start=1):
+        hidden = "1" if label == "ROOT_PASSWORD" else "0"
+        command += [label, str(row), "1", value, str(row), str(field_x), str(field_len), str(input_len), hidden]
+    # stderr stays on the terminal so dialog can draw; --stdout carries the field values.
+    result = subprocess.run(command, text=True, stdout=subprocess.PIPE)
+    if result.returncode != 0:
+        return None
+    fields = result.stdout.split("\n")
+    if fields and fields[-1] == "":
+        fields.pop()
+    return fields
+
+
+def write_rootpass(path: Path, password: str) -> None:
+    """Store a SHA-512 crypt hash in kickstart/rootpass.cfg. The plaintext password is not saved."""
+    result = subprocess.run(["openssl", "passwd", "-6", "-stdin"], input=password + "\n", text=True, capture_output=True)
+    hashed = result.stdout.strip()
+    if result.returncode != 0 or not hashed.startswith("$6$"):
+        log.error("openssl passwd failed: %s", result.stderr.strip())
+        raise SystemExit(1)
+    path.write_text(f"# Root password\nrootpw --iscrypted --allow-ssh {hashed}\n")
+
+
+def ensure_ssh_key(path: Path) -> None:
+    """Create an ed25519 key pair with an empty passphrase when the private key is missing."""
+    if path.exists():
+        log.info("SSH key already exists: %s", path)
+        return
+    public = path.with_name(path.name + ".pub")
+    if public.exists():
+        public.unlink()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        ["ssh-keygen", "-q", "-t", "ed25519", "-f", str(path), "-N", "", "-C", "shadowlab"],
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        log.error("ssh-keygen failed: %s", result.stderr.strip() or result.stdout.strip())
+        raise SystemExit(1)
+    log.info("Created SSH key %s", path)
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    parser = argparse.ArgumentParser(description="Confirm Shadowlab config/.env, the kickstart root password, and the SSH key.")
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent, help="repository root (default: parent of this script)")
+    args = parser.parse_args()
+    root = args.root.resolve()
+    config_dir = root / "config"
+    env_path = config_dir / ".env"
+    if env_path.is_file():
+        items = load_env(env_path)
+        if not items:
+            log.error("no settings in %s", env_path)
+            raise SystemExit(1)
+    else:
+        items = list(DEFAULTS)
+
+    require_command("dialog", "the dialog package")
+    require_command("openssl", "openssl")
+    require_command("ssh-keygen", "openssh-client")
+
+    values = dialog_values(items)
+    if values is None:
+        log.info("Cancelled")
+        raise SystemExit(1)
+    if len(values) != len(items) + 1:
+        log.error("dialog returned %d fields, expected %d", len(values), len(items) + 1)
+        raise SystemExit(1)
+
+    updated = [(key, value) for (key, _), value in zip(items, values[:-1])]
+    password = values[-1]
+    write_env(env_path, updated)
+    log.info("Wrote %s", env_path)
+    rootpass = root / "kickstart" / "rootpass.cfg"
+    if password:
+        write_rootpass(rootpass, password)
+        log.info("Updated %s", rootpass)
+    else:
+        log.info("Root password unchanged")
+    ensure_ssh_key(config_dir / "id_shadowlab")
+
+
+if __name__ == "__main__":
+    sys.exit(main())
