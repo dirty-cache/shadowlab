@@ -15,10 +15,10 @@ rm -f $oemdisk
 dd if=/dev/zero of=$oemdisk bs=1M count=8 status=none
 mkfs.vfat -n OEMDRV $oemdisk
 
-mcopy -i $oemdisk $gitdir/linux/rootpass.cfg ::rootpass.cfg
-mcopy -i $oemdisk $gitdir/linux/kickstart.cfg ::ks.cfg
-mcopy -i $oemdisk $gitdir/linux/shadowlab.tar.gz ::shadowlab.tar.gz
-mcopy -i $oemdisk $gitdir/linux/"$1".cfg ::settings.cfg
+mcopy -i $oemdisk $gitdir/kickstart/rootpass.cfg ::rootpass.cfg
+mcopy -i $oemdisk $gitdir/kickstart/kickstart.cfg ::ks.cfg
+mcopy -i $oemdisk $gitdir/kickstart/shadowlab.tar.gz ::shadowlab.tar.gz
+mcopy -i $oemdisk $gitdir/kickstart/"$1".cfg ::settings.cfg
 
 echo contents:
 

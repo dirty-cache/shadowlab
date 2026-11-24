@@ -7,13 +7,22 @@
 # ---------------------------------------------------------------------------
 
 NIC=enp6s18
+IPADDR=192.168.70.2
+GATEWAY=192.168.70.253
+DNS=192.168.70.253
+
+serial=$(dmidecode -s system-serial-number)
+
+case $serial in
+  docker01) IPADDR=192.168.70.12 ;;
+esac
 
 nmcli connection modify $NIC \
 	connection.autoconnect yes \
 	ipv4.method manual \
-	ipv4.addresses 192.168.70.2/24 \
-	ipv4.gateway 192.168.70.254 \
-	ipv4.dns 192.168.70.254 \
+	ipv4.addresses ${IPADDR}/24 \
+	ipv4.gateway ${GATEWAY} \
+	ipv4.dns ${DNS} \
 	ipv6.method disabled
 
 nmcli connection show $NIC
