@@ -1,0 +1,14 @@
+#!/bin/bash
+# ===========================================================================
+# Title       : pve-disk
+# Description : Make an importable disk image
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-28
+# ---------------------------------------------------------------------------
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/sbin/qm || die "qm not found (Not a Proxmox host)"
+
+disk="$(pvesm path local-lvm:vm-100-disk-0)"
+
+qemu-img convert -p -O qcow2 $disk disk.qcow2
