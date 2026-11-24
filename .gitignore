@@ -1,4 +1,5 @@
 __pycache__/
+.cursor/
 ansible/group_vars/pve.yml
 ansible/group_vars/technitium.yml
 ansible/proxmox/.venv/

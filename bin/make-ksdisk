@@ -9,7 +9,7 @@ command -v mcopy >/dev/null || die "mcopy not found (install mtools)"
 cd $(dirname $BASH_SOURCE)
 
 gitdir=$(git rev-parse --show-toplevel)
-oemdisk=$gitdir/iso/"$1".img
+oemdisk=$gitdir/iso/"$1".img.raw
 
 rm -f $oemdisk
 dd if=/dev/zero of=$oemdisk bs=1M count=8 status=none
@@ -20,8 +20,10 @@ mcopy -i $oemdisk $gitdir/linux/kickstart.cfg ::ks.cfg
 mcopy -i $oemdisk $gitdir/linux/shadowlab.tar.gz ::shadowlab.tar.gz
 mcopy -i $oemdisk $gitdir/linux/"$1".cfg ::settings.cfg
 
-mcopy -i $oemdisk $gitdir/linux/shadowlab*.rpm ::shadowlab.rpm
+echo contents:
 
-mdir -i $oemdisk
+mdir -b -i $oemdisk
+
+echo
 
 ls -al $gitdir/iso

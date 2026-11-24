@@ -8,7 +8,7 @@ DISK_STORAGE=local-lvm
 LAN=vmbr0
 ISO=Rocky-9.8-x86_64-minimal.iso
 KS=clean
-NOSTART=
+AUTO=0
 
 usage() {
     echo TBD
@@ -31,16 +31,18 @@ create() {
     --scsi1 "${DISK_STORAGE}:0,import-from=local:import/${KS}.img.raw" \
     --ide2 "local:iso/$ISO,media=cdrom" \
     --boot "order=scsi0;ide2" \
-    --net0 "virtio,bridge=${LAN}"
+    --net0 "virtio,bridge=${LAN}" \
+    --smbios1 "serial=$NAME"
 
-    test -z $NOSTART || return
-    qm start $vmid
-    echo Sleeping 10 seconds to allow startup....
-    sleep 10
-    echo Sending keystrokes...
-    qm sendkey $vmid up
-    qm sendkey $vmid ret
-    echo Done.
+    if [ "$AUTO" = "1" ]; then
+        qm start $vmid
+        echo Sleeping 10 seconds to allow startup....
+        sleep 10
+        echo Sending keystrokes...
+        qm sendkey $vmid up
+        qm sendkey $vmid ret
+        echo Done.
+    fi
 }
 
 destroy() {
@@ -60,10 +62,10 @@ cleanup() {
     qm set $vmid --delete unused0
 }
 
-while getopts ":h:c:n:s" OPT; do
+while getopts ":h:c:n:a" OPT; do
   case "$OPT" in
   c)   KS=$OPTARG ;;
-  s)   NOSTART=1 ;;
+  a)   AUTO=1 ;;
   n)   NAME=$OPTARG ;;
  \?|h) usage ; exit 0 ;;
   esac

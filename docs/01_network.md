@@ -10,10 +10,12 @@ See the [network diagram](diagram.md) for how these systems connect.
 
 ## IP Addresses
 
-| System  	 | IP Address      | FQDN              | Notes | Del |
-|---         |---              |---                |---    |---  |
-| Proxmox  	 | 192.168.70.1    | pve.shadowlab.lan    | Proxmox host | |
-| Router     | 192.168.70.254  | router.shadowlab.lan | OPNSense router | |
-| Management | 192.168.70.2    | mgt.shadowlab.lan    | Management VM (Rocky Linux, Docker) | |
-| Proxy      | 192.168.70.3    | proxy.shadowlab.lan  | Alternate NIC on OPNSense | |
+| System  	     | IP Address      | FQDN                   | Notes        | Del |
+|---             |---              |---                     |---           |---  |
+| DNS & Homepage | 192.168.70.1    | dns.shadowlab.lan      | Future reserved | |
+| Proxy          | 192.168.70.2    | proxy.shadowlab.lan    | Alternate NIC on Docker | |
+| Proxmox  	     | 192.168.70.11   | pve.shadowlab.lan      | Proxmox host | |
+| Docker         | 192.168.70.12   | docker01.shadowlab.lan | Management VM (Rocky Linux, Docker) | |
+| Router         | 192.168.70.254  | router.shadowlab.lan   | OPNSense router | |
+
 
