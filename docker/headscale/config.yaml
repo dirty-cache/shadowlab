@@ -10,10 +10,10 @@
 #
 # https://myheadscale.example.com:443
 #
-server_url: https://headscale.shadowlab.lan
+server_url: https://headscale.shadow.lab
 
 # Added
-trusted_proxies: 192.168.70.3/32
+trusted_proxies: 192.168.70.2/32
 
 # Address to listen to / bind to on the server
 #
@@ -300,7 +300,9 @@ dns:
       # a map of domains and which DNS server to use for each.
     split:
       shadowlab.lan:
-        - 192.168.70.2
+        - 192.168.70.254
+      shadow.lab:
+        - 192.168.70.254
       # foo.bar.com:
       #   - 1.1.1.1
       # darp.headscale.net:
@@ -311,6 +313,7 @@ dns:
       # your tailnet base_domain is always the first search domain.
   search_domains:
     - shadowlab.lan
+    - shadow.lab
 
   # Extra DNS records
   # so far only A and AAAA records are supported (on the tailscale side)

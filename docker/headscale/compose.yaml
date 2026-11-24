@@ -7,9 +7,9 @@ services:
     tmpfs:
       - /var/run/headscale
     ports:
-      - "0.0.0.0:8080:8080"
-      - "0.0.0.0:9090:9090"
-      - "0.0.0.0:3478:3478/udp"
+      - "0.0.0.0:3006:8080"
+      # "0.0.0.0:9090:9090" # metrics
+      # "0.0.0.0:3478:3478/udp" # STUN
     volumes:
       # Please set <HEADSCALE_PATH> to the absolute path
       # of the previously created headscale directory.
@@ -24,7 +24,7 @@ services:
     container_name: headplane
     restart: unless-stopped
     ports:
-      - "${COMPOSE_PORT_HTTP:-3010}:3000"
+      - 3007:3000"
     volumes:
       - data:/var/lib/headplane
       - /proc:/proc:ro

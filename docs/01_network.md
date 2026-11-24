@@ -34,6 +34,8 @@ See the [network diagram](diagram.md) for how these systems connect.
 | 3003           | Forgejo           | |
 | 3004           | LiteLLM           | |
 | 3005           | Authentik         | |
+| 3006           | Headscale         | |
+| 3007           | Headplane         | |
 | 5432           | Postgres          | |
 | 5380           | Technitium        | HTTP |
 | 53443          | Technitium        | HTTPS |
