@@ -8,5 +8,5 @@ source $gitdir/config/.env
 
 test -z $PVEHOST && die "pvehost not set"
 
-rsync -ai $gitdir/proxmox/bin/* root@${PVEHOST}:/usr/local/bin/
-rsync -ai $gitdir/proxmox/etc/* root@${PVEHOST}:/usr/local/etc/
+rsync -ai --chown=root:root $gitdir/proxmox/bin/* root@${PVEHOST}:/usr/local/bin/
+rsync -ai --chown=root:root $gitdir/proxmox/etc/* root@${PVEHOST}:/usr/local/etc/

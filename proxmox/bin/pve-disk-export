@@ -1,0 +1,36 @@
+#!/bin/bash
+# ===========================================================================
+# Title       : pve-disk-export
+# Description : Make an importable disk image
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-28
+# ---------------------------------------------------------------------------
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+test -x /usr/sbin/qm || die "qm not found (Not a Proxmox host)"
+
+usage() {
+    echo tbd
+}
+
+dump() {
+    test -z $name && usage && die "name not set"
+    vmid=$(qm list | awk -vname=$name '$2==name {print $1}')
+    test -z $vmid && die "vmid not found"
+    disk="$(pvesm path local-lvm:vm-$vmid-disk-0)"
+    target=/var/lib/vz/import/${name}.qcow2
+    test -f $target && die "$target already exists"
+    echo dumping $disk to disk.qcow2
+    qemu-img convert -p -O qcow2 $disk $target
+}
+
+while getopts ":h:" OPT; do
+  case "$OPT" in
+ \?|h) usage ; exit 0 ;;
+  esac
+done
+shift $((OPTIND-1))
+
+name=$1; shift
+
+dump

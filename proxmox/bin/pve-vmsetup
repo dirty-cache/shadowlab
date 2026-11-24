@@ -8,7 +8,6 @@
 # Usage: vmsetup <VMID> <input-file>
 
 function send_line() {
-  #echo -e "${DGN}Sending line: ${YW}$1${CL}"
   for ((i = 0; i < ${#1}; i++)); do
     character=${1:i:1}
     case $character in
