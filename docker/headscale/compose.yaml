@@ -24,7 +24,7 @@ services:
     container_name: headplane
     restart: unless-stopped
     ports:
-      - 3007:3000"
+      - 3007:3000
     volumes:
       - data:/var/lib/headplane
       - /proc:/proc:ro
