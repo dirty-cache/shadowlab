@@ -11,14 +11,14 @@ services:
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.2}
     ports:
-    - ${COMPOSE_PORT_HTTP:-9000}:9000
-    - ${COMPOSE_PORT_HTTPS:-9443}:9443
+    - 3005:9000
+    # ${COMPOSE_PORT_HTTPS:-9443}:9443
     restart: unless-stopped
     shm_size: 512mb
     volumes:
     - data:/data
     - templates:/templates
-    - /usr/local/etc/dirty_cache_root_ca.crt:/usr/local/share/ca-certificates/dirty-cache-root-ca.crt:ro
+    # /usr/local/etc/dirty_cache_root_ca.crt:/usr/local/share/ca-certificates/dirty-cache-root-ca.crt:ro
   worker:
     command: worker
     env_file:

@@ -7,8 +7,11 @@ services:
     image: codeberg.org/forgejo/forgejo:17
     container_name: forgejo
     environment:
-      - USER_UID=1000
-      - USER_GID=1000
+      USER_UID: 1000
+      USER_GID: 1000
+      FORGEJO____APP_NAME: "Forgejo (Shadowlab)"
+      FORGEJO____DEFAULT_BRANCH: "master"
+
       # SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
     restart: always
     networks:

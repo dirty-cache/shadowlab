@@ -3,7 +3,7 @@ services:
     image: ghcr.io/berriai/litellm:main-latest
     container_name: litellm
     ports:
-      - ${COMPOSE_PORT_HTTP:-4000}:4000
+      - 3004:4000
     volumes:
       - config:/config
     command: ["--config", "/config/config.yaml", "--host", "0.0.0.0", "--port", "4000"]
