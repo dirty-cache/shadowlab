@@ -1,0 +1,45 @@
+#!/bin/bash
+# ===========================================================================
+# Title       : ip_auto
+# Description : Set the default interface to use Fixed IP (manual)
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-10-23
+# ---------------------------------------------------------------------------
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
+NIC=enp6s18
+GATEWAY=192.168.70.254
+DNS=192.168.70.254
+DOMAIN=shadowlab.lan
+
+serial=$(dmidecode -s system-serial-number)
+
+network_dhcp() {
+    nmcli connection modify $NIC \
+        connection.autoconnect yes \
+        ipv4.method auto \
+        ipv4.addresses "" \
+        ipv4.gateway "" \
+        ipv4.dns "" \
+        ipv6.method disabled
+}
+
+network_fixed() {
+    nmcli connection modify $NIC \
+        connection.autoconnect yes \
+        ipv4.method manual \
+        ipv4.addresses ${IPADDR}/24 \
+        ipv4.gateway ${GATEWAY} \
+        ipv4.dns ${DNS} \
+        ipv4.dns-search ${DOMAIN} \
+        ipv6.method disabled
+}
+
+case $serial in
+  docker01) IPADDR=192.168.70.12 ; network_fixed ;;
+  *)        network_dhcp ;;
+esac
+
+nmcli connection show $NIC
+

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-gitdir=$(git rev-parse --show-toplevel)
+export gitdir=$(git rev-parse --show-toplevel)
 
 pathmunge () {
     case ":${PATH}:" in

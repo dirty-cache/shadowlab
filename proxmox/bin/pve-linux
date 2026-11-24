@@ -12,8 +12,8 @@ test -x /usr/sbin/qm || die "qm not found (Not a Proxmox host)"
 NAME=linux
 DISK_STORAGE=local-lvm
 LAN=vmbr0
-ISO=Rocky-9.8-x86_64-minimal.iso
-KS=clean
+ISO=Rocky-9.9-x86_64-minimal.iso
+KS=rocky
 AUTO=0
 
 usage() {
@@ -61,7 +61,7 @@ create() {
         qm start $vmid
         echo Sleeping 10 seconds to allow startup....
         sleep 10
-        echo Sending keystrokes...
+        echo Sending keystrokes to start Rocky Installer...
         qm sendkey $vmid up
         qm sendkey $vmid ret
         echo Done.

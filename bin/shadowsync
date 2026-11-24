@@ -4,6 +4,6 @@ die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 
 gitdir=$(git rev-parse --show-toplevel)
 
-ip=docker01.shadowlab.lan
+ip=${1:-docker01.shadowlab.lan}
 
-rsync -ai --delete --chown=root:root $gitdir/linux/shadowlab/ root@${ip}:/opt/shadowlab/
+rsync -ai --delete --chown=root:root $gitdir/linux/ root@${ip}:/opt/shadowlab/
