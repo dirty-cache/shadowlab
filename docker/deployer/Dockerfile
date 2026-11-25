@@ -1,12 +1,14 @@
 # syntax=docker/dockerfile:1
 # Shadow Lab Deployer
-# Base image ships the docker CLI + compose plugin (same major line as the
-# lab hosts); Python/FastAPI are added on top.
-FROM docker:29-cli
+# Published to https://github.com/dirty-cache/shadowlab/packages
+# as ghcr.io/dirty-cache/shadowlab/deployer
+FROM python:3.13-alpine
 
-RUN apk add --no-cache python3 py3-pip && \
-    pip install --no-cache-dir --break-system-packages \
-        "fastapi>=0.115" "uvicorn[standard]>=0.30" "pyyaml>=6"
+LABEL org.opencontainers.image.source=https://github.com/dirty-cache/shadowlab
+LABEL org.opencontainers.image.description="Shadow Lab Deployer"
+
+RUN pip install --no-cache-dir --break-system-packages \
+        "fastapi>=0.115" "uvicorn[standard]>=0.30" "pyyaml>=6" "httpx>=0.27"
 
 COPY app/ /opt/app/
 COPY static/ /opt/static/

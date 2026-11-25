@@ -9,9 +9,8 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const state = {
   token: localStorage.getItem("deployer.token") || "",
   authRequired: false,
-  hosts: [],
-  hostInfo: {},          // host_id -> daemon info (last known)
-  hostId: localStorage.getItem("deployer.hostId") || "",
+  envs: [],
+  envId: localStorage.getItem("deployer.envId") || localStorage.getItem("deployer.hostId") || "",
   overview: null,
   autoRefresh: true,
   job: null,             // current job object
@@ -107,23 +106,26 @@ async function init() {
   $("#login").classList.add("hidden");
   $("#app").classList.remove("hidden");
   $("#logout").classList.toggle("hidden", !state.token);
-  $("#foot-version").textContent = `deployer ${health.version} · compose ${health.compose}`;
+  $("#foot-version").textContent = `deployer ${health.version}`;
 
   try {
-    const { hosts } = await api("/hosts");
-    state.hosts = hosts;
-    if (!state.hostId || !hosts.some((h) => h.id === state.hostId)) {
-      state.hostId = hosts[0].id;
-      localStorage.setItem("deployer.hostId", state.hostId);
-    }
+    await loadEnvironments();
   } catch (e) {
     toast(e.message, "error");
-    return;
+    state.envs = [];
   }
   renderHosts();
-  await loadOverview();
-  refreshHostDots();
+  if (state.envId) await loadOverview();
   startAutoRefresh();
+}
+
+async function loadEnvironments() {
+  const { environments } = await api("/environments");
+  state.envs = environments;
+  if (!state.envId || !environments.some((h) => h.id === state.envId)) {
+    state.envId = environments.length ? environments[0].id : "";
+    if (state.envId) localStorage.setItem("deployer.envId", state.envId);
+  }
 }
 
 /* ---------- hosts ---------- */
@@ -131,90 +133,65 @@ async function init() {
 function renderHosts() {
   const list = $("#host-list");
   list.innerHTML = "";
-  $("#host-count").textContent = String(state.hosts.length);
-  for (const h of state.hosts) {
-    const info = state.hostInfo[h.id];
-    const dotClass = info ? (info.ok ? "ok" : "err") : "";
+  $("#host-count").textContent = String(state.envs.length);
+  for (const h of state.envs) {
     const item = document.createElement("button");
-    item.className = "host-item" + (h.id === state.hostId ? " active" : "");
+    item.className = "host-item" + (h.id === state.envId ? " active" : "");
     item.dataset.id = h.id;
-    item.title = h.description || h.address;
+    item.title = h.status || h.address;
     item.innerHTML = `
-      <span class="dot ${dotClass}"></span>
+      <span class="dot ${h.ok ? "ok" : "err"}"></span>
       <span class="host-body">
         <span class="host-name">${esc(h.name)}</span>
-        <span class="host-addr">${esc(h.address)}</span>
-      </span>
-      <span class="host-actions">
-        <button data-act="edit" title="Edit host">${ICONS.gear}</button>
-        <button data-act="del" title="Remove host">${ICONS.trash}</button>
+        <span class="host-addr">${esc(h.address || h.status || "")}</span>
       </span>`;
-    item.addEventListener("click", (ev) => {
-      const act = ev.target.closest("button[data-act]");
-      if (act) {
-        ev.stopPropagation();
-        if (act.dataset.act === "edit") openHostModal(h);
-        else confirmRemoveHost(h);
-        return;
-      }
-      selectHost(h.id);
-    });
+    item.addEventListener("click", () => selectEnv(h.id));
     list.appendChild(item);
   }
 }
 
-async function selectHost(hostId) {
-  if (hostId === state.hostId && state.overview) return;
-  state.hostId = hostId;
-  localStorage.setItem("deployer.hostId", hostId);
+async function selectEnv(envId) {
+  if (envId === state.envId && state.overview) return;
+  state.envId = envId;
+  localStorage.setItem("deployer.envId", envId);
   renderHosts();
   await loadOverview();
 }
 
 async function loadOverview() {
-  if (!state.hosts.length) return;
-  const host = state.hosts.find((h) => h.id === state.hostId);
-  if (!host) return;
+  if (!state.envId) return;
   try {
-    state.overview = await api(`/overview?host_id=${encodeURIComponent(host.id)}`);
-    state.hostInfo[host.id] = state.overview.info;
+    state.overview = await api(`/overview?env=${encodeURIComponent(state.envId)}`);
   } catch (e) {
     toast(e.message, "error");
     return;
   }
+  const fresh = state.overview.environment;
+  if (fresh) state.envs = state.envs.map((h) => (h.id === fresh.id ? fresh : h));
   renderHosts();
   renderOverview();
-}
-
-async function refreshHostDots() {
-  // Ping hosts we have not seen recently (parallel, best effort).
-  const stale = state.hosts.filter((h) => !state.hostInfo[h.id]);
-  await Promise.all(stale.map(async (h) => {
-    try {
-      state.hostInfo[h.id] = await api(`/hosts/${encodeURIComponent(h.id)}/info`);
-    } catch (e) {
-      state.hostInfo[h.id] = { ok: false, error: e.message };
-    }
-  }));
-  renderHosts();
 }
 
 /* ---------- overview ---------- */
 
 function renderOverview() {
-  const { host, info, projects } = state.overview;
+  const { environment, projects, dockhand_ok, dockhand_error, catalog_error, branch } = state.overview;
   $("#tb-title").textContent = "Projects";
   const sub = $("#tb-sub");
-  if (info.ok) {
-    sub.textContent = `${host.name} · docker ${info.version} · ${info.containers_running ?? 0}/${info.containers ?? 0} containers`;
+  if (dockhand_ok) {
+    sub.textContent = `${environment.name} · ${branch} · ${projects.length} stacks`;
   } else {
-    sub.textContent = `${host.name} · unreachable`;
+    sub.textContent = `${environment.name} · Dockhand unreachable`;
   }
 
   const banner = $("#banner");
-  if (!info.ok) {
+  const notes = [];
+  if (dockhand_error) notes.push(`Cannot reach Dockhand — ${esc(dockhand_error)}`);
+  else if (!dockhand_ok) notes.push(`Dockhand reports ${esc(environment.name)} as offline`);
+  if (catalog_error) notes.push(esc(catalog_error));
+  if (notes.length) {
     banner.classList.remove("hidden");
-    banner.innerHTML = `⚠ Cannot reach the Docker daemon at <span class="muted">${esc(host.address)}</span> — ${esc(info.error || "unknown error")}`;
+    banner.innerHTML = notes.join("<br>");
   } else {
     banner.classList.add("hidden");
   }
@@ -225,9 +202,8 @@ function renderOverview() {
     grid.innerHTML = `
       <div class="empty">
         <div class="big">No compose projects found</div>
-        <div>Add folders containing a <code>compose.yaml</code> to
-        <code>${esc(state.overview && state.overview.host ? "the projects directory" : "the projects directory")}</code>
-        and refresh.</div>
+        <div>Nothing under <code>docker/</code> on <code>${esc(branch || "the configured branch")}</code>
+        has a compose file.</div>
       </div>`;
     return;
   }
@@ -248,6 +224,14 @@ function serviceState(p, svc) {
   return { cls: "err", label: (s.state || "exited").toLowerCase() };
 }
 
+function sourceLine(p) {
+  const src = p.source || {};
+  const bits = [p.compose_path];
+  if (src.repository_url) bits.push(src.repository_url);
+  if (src.branch) bits.push(src.branch);
+  return bits.filter(Boolean).join(" · ");
+}
+
 function projectCard(p) {
   const job = state.job;
   const busy = job && job.project === p.name && job.status === "running";
@@ -261,8 +245,9 @@ function projectCard(p) {
     return st && st.state !== "running" && st.state !== "restarting";
   }).length;
 
+  const tracked = p.source && p.source.source_type === "git" && p.source.git_stack_id;
   let summary;
-  if (!state.overview.info.ok) summary = '<span class="chip">—</span>';
+  if (!state.overview.dockhand_ok) summary = '<span class="chip">—</span>';
   else if (total === 0) summary = '<span class="chip warn">no services parsed</span>';
   else if (up === total) summary = `<span class="chip ok">${total} up</span>`;
   else if (up > 0) summary = `<span class="chip warn">${up} up · ${down} down</span>`;
@@ -271,11 +256,10 @@ function projectCard(p) {
     : '<span class="chip">not deployed</span>';
 
   const chips = [summary];
-  if (!p.has_env && p.has_env_example)
-    chips.push('<span class="chip warn" title="This project has a .env.example but no .env — copy it and fill in the values">.env missing</span>');
-  if (!p.in_repo)
-    chips.push('<span class="chip warn" title="Installed on this host but missing from the repo docker/ directory">not in repo</span>');
-  if (p.has_build) chips.push('<span class="chip info">build</span>');
+  if (p.protected) chips.push('<span class="chip" title="Dockhand is not deployed from this UI">protected</span>');
+  else if (tracked) chips.push('<span class="chip info" title="Git stack in Dockhand">git</span>');
+  else chips.push('<span class="chip warn" title="Not registered as a Dockhand git stack yet">not in Dockhand</span>');
+  if (p.source && p.source.sync_status) chips.push(`<span class="chip">${esc(p.source.sync_status)}</span>`);
   if (p.status_error) chips.push(`<span class="chip err" title="${esc(p.status_error)}">status error</span>`);
 
   const rows = p.services.map((s) => {
@@ -302,30 +286,24 @@ function projectCard(p) {
       <span class="chips">${chips.join("")}</span>
     </div>
     ${p.description ? `<div class="card-desc">${esc(p.description)}</div>` : ""}
+    <div class="card-desc muted small">${esc(sourceLine(p))}</div>
     <div class="svc-list">${rows || '<div class="svc-row"><span class="muted small">no services</span></div>'}</div>
     <div class="card-foot">
+      <button class="btn btn-primary" data-act="deploy" title="${p.protected ? "Not deployed from here" : "Register in Dockhand and deploy"}" ${busy || p.protected ? "disabled" : ""}>
+        ${ICONS.play} Deploy
+      </button>
       <span class="menu-wrap">
-        <button class="btn btn-primary" data-menu="deploy" ${busy ? "disabled" : ""}>
-          ${ICONS.play} Deploy ${ICONS.caret}
-        </button>
-        <div class="menu">
-          <button data-act="deploy" ${busy ? "disabled" : ""}>Deploy</button>
-          <button data-act="deploy-pull" ${busy ? "disabled" : ""}>Pull latest &amp; deploy</button>
-          ${p.has_build ? `<div class="sep"></div><button data-act="deploy-build" ${busy ? "disabled" : ""}>Build &amp; deploy</button>` : ""}
-        </div>
-      </span>
-      <span class="menu-wrap">
-        <button class="btn btn-danger" data-menu="stop" ${busy || up === 0 ? "disabled" : ""}>
+        <button class="btn btn-danger" data-menu="stop" ${busy || p.protected || up === 0 ? "disabled" : ""}>
           ${ICONS.stop} Stop ${ICONS.caret}
         </button>
         <div class="menu">
-          <button data-act="stop" ${busy || up === 0 ? "disabled" : ""}>Stop</button>
+          <button data-act="stop" ${busy || p.protected || up === 0 ? "disabled" : ""}>Stop</button>
           <div class="sep"></div>
-          <button class="danger" data-act="stop-volumes" ${busy || up === 0 ? "disabled" : ""}>Stop &amp; remove volumes</button>
+          <button class="danger" data-act="stop-volumes" ${busy || p.protected || up === 0 ? "disabled" : ""}>Stop &amp; remove volumes</button>
           <div class="hint">Removing volumes deletes stored data</div>
         </div>
       </span>
-      <button class="btn" data-act="restart" title="Restart services" ${busy || up === 0 ? "disabled" : ""}>
+      <button class="btn" data-act="restart" title="Restart services" ${busy || p.protected || up === 0 ? "disabled" : ""}>
         ${ICONS.restart} Restart
       </button>
       <button class="btn btn-ghost" data-act="logs" title="View logs">
@@ -358,18 +336,17 @@ function closeMenus() {
 document.addEventListener("click", closeMenus);
 
 async function handleAction(p, act, ev) {
-  const host = state.hosts.find((h) => h.id === state.hostId);
-  if (!host) return;
+  const env = state.envs.find((h) => h.id === state.envId);
+  if (!env) return;
   if (act === "logs") { openLogs(p); return; }
+  if (p.protected) return;
   if (act === "stop-volumes") {
-    if (!confirm(`Stop ${p.name} on ${host.name} and REMOVE ITS VOLUMES?\nStored data will be deleted.`)) return;
+    if (!confirm(`Stop ${p.name} on ${env.name} and REMOVE ITS VOLUMES?\nStored data will be deleted.`)) return;
   }
-  const body = { host_id: host.id };
+  const body = { env_id: env.id };
   let path, label;
   switch (act) {
     case "deploy": path = "/deploy"; label = "Deploy"; break;
-    case "deploy-pull": path = "/deploy"; body.pull = true; label = "Pull & deploy"; break;
-    case "deploy-build": path = "/deploy"; body.build = true; label = "Build & deploy"; break;
     case "stop": path = "/stop"; label = "Stop"; break;
     case "stop-volumes": path = "/stop"; body.volumes = true; label = "Stop + remove volumes"; break;
     case "restart": path = "/restart"; label = "Restart"; break;
@@ -430,7 +407,6 @@ async function pollJob() {
       else toast(`${j.description} — failed (exit ${j.exit_code})`, "error");
       state.job = null;
       loadOverview();
-      refreshHostDots();
     }
   }, 1500);
 }
@@ -445,7 +421,7 @@ $("#job-close").addEventListener("click", () => {
 /* ---------- logs modal ---------- */
 
 function openLogs(p) {
-  const host = state.hosts.find((h) => h.id === state.hostId);
+  const host = state.envs.find((h) => h.id === state.envId);
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
@@ -488,7 +464,7 @@ function openLogs(p) {
     const tail = overlay.querySelector("#logs-tail").value;
     try {
       const text = await api(
-        `/projects/${encodeURIComponent(p.name)}/logs?host_id=${encodeURIComponent(host.id)}` +
+        `/projects/${encodeURIComponent(p.name)}/logs?env=${encodeURIComponent(host.id)}` +
         `&service=${encodeURIComponent(svc)}&tail=${tail}`
       );
       const body = overlay.querySelector("#logs-body");
@@ -507,136 +483,21 @@ function openLogs(p) {
   state.logProject = p.name;
 }
 
-/* ---------- host modal ---------- */
-
-function openHostModal(host) {
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  overlay.innerHTML = `
-    <div class="modal">
-      <div class="modal-head">
-        <h2>${host ? "Edit host" : "Add Docker host"}</h2>
-        <button class="btn btn-ghost icon-btn" id="host-close" title="Close">${ICONS.x}</button>
-      </div>
-      <div class="modal-body">
-        <div class="field">
-          <label for="h-name">Name</label>
-          <input id="h-name" maxlength="32" placeholder="lab" value="${esc(host ? host.name : "")}">
-        </div>
-        <div class="field">
-          <label for="h-address">Address</label>
-          <input id="h-address" placeholder="tcp://192.168.70.5:2376" value="${esc(host ? host.address : "")}">
-          <div class="hint">unix:///var/run/docker.sock · tcp://host:port · tls://host:port (empty = local socket)</div>
-        </div>
-        <div class="field">
-          <label for="h-desc">Description</label>
-          <input id="h-desc" maxlength="200" placeholder="optional" value="${esc(host ? host.description : "")}">
-        </div>
-        <div class="test-row">
-          <button class="btn" id="h-test">Test connection</button>
-          <span class="test-result" id="h-test-result"></span>
-        </div>
-      </div>
-      <div class="modal-foot">
-        <button class="btn btn-ghost" id="h-cancel">Cancel</button>
-        <button class="btn btn-primary" id="h-save">${host ? "Save" : "Add host"}</button>
-      </div>
-    </div>`;
-  $("#modal-root").appendChild(overlay);
-
-  const close = () => overlay.remove();
-  const readForm = () => ({
-    name: overlay.querySelector("#h-name").value,
-    address: overlay.querySelector("#h-address").value,
-    description: overlay.querySelector("#h-desc").value,
-  });
-
-  overlay.addEventListener("click", (ev) => { if (ev.target === overlay) close(); });
-  overlay.querySelector("#host-close").addEventListener("click", close);
-  overlay.querySelector("#h-cancel").addEventListener("click", close);
-  document.addEventListener("keydown", function onEsc(ev) {
-    if (ev.key === "Escape") { close(); document.removeEventListener("keydown", onEsc); }
-  });
-
-  overlay.querySelector("#h-test").addEventListener("click", async (ev) => {
-    const btn = ev.currentTarget;
-    const result = overlay.querySelector("#h-test-result");
-    btn.disabled = true;
-    result.className = "test-result";
-    result.innerHTML = '<span class="spin"></span> &nbsp;testing…';
-    try {
-      const info = await api("/hosts/test", { method: "POST", body: { address: readForm().address } });
-      if (info.ok) {
-        result.className = "test-result ok";
-        result.textContent = `✓ docker ${info.version} · ${info.containers_running ?? 0}/${info.containers ?? 0} containers`;
-      } else {
-        result.className = "test-result err";
-        result.textContent = "✗ " + (info.error || "unreachable");
-      }
-    } catch (e) {
-      result.className = "test-result err";
-      result.textContent = "✗ " + e.message;
-    }
-    btn.disabled = false;
-  });
-
-  overlay.querySelector("#h-save").addEventListener("click", async () => {
-    const body = readForm();
-    try {
-      if (host) {
-        const { host: updated } = await api(`/hosts/${encodeURIComponent(host.id)}`, { method: "PUT", body });
-        state.hosts = state.hosts.map((h) => (h.id === host.id ? updated : h));
-        delete state.hostInfo[host.id];
-        toast(`Host ${updated.name} updated`, "success");
-      } else {
-        const { host: created } = await api("/hosts", { method: "POST", body });
-        state.hosts.push(created);
-        toast(`Host ${created.name} added`, "success");
-      }
-      close();
-      renderHosts();
-      if (state.hostId) await loadOverview();
-      refreshHostDots();
-    } catch (e) {
-      toast(e.message, "error");
-    }
-  });
-
-  setTimeout(() => overlay.querySelector("#h-name").focus(), 50);
-}
-
-function confirmRemoveHost(h) {
-  if (state.hosts.length <= 1) { toast("Cannot remove the last host", "error"); return; }
-  if (!confirm(`Remove host "${h.name}" (${h.address})?`)) return;
-  api(`/hosts/${encodeURIComponent(h.id)}`, { method: "DELETE" })
-    .then(() => {
-      state.hosts = state.hosts.filter((x) => x.id !== h.id);
-      if (state.hostId === h.id) {
-        state.hostId = state.hosts[0].id;
-        localStorage.setItem("deployer.hostId", state.hostId);
-        return loadOverview();
-      }
-      renderHosts();
-      toast(`Host ${h.name} removed`, "success");
-    })
-    .catch((e) => toast(e.message, "error"));
-}
-
 /* ---------- auto refresh ---------- */
 
 function startAutoRefresh() {
   setInterval(() => {
     if (!state.autoRefresh || document.hidden) return;
     if (state.job && state.job.status === "running") return;
-    loadOverview();
-    if (Math.random() < 0.2) refreshHostDots(); // host pings are slow; do them occasionally
+    loadEnvironments().then(() => loadOverview()).catch((e) => toast(e.message, "error"));
   }, 10000);
 }
 
 /* ---------- events ---------- */
 
-$("#refresh").addEventListener("click", () => { loadOverview(); refreshHostDots(); });
-$("#add-host").addEventListener("click", () => openHostModal(null));
+$("#refresh").addEventListener("click", () => {
+  loadEnvironments().then(() => loadOverview()).catch((e) => toast(e.message, "error"));
+});
 $("#autorefresh").addEventListener("change", (ev) => { state.autoRefresh = ev.target.checked; });
 $("#logout").addEventListener("click", () => {
   state.token = "";

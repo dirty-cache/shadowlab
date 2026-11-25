@@ -1,0 +1,36 @@
+name: Publish deployer image
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - docker/deployer/**
+      - .github/workflows/deployer-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker/deployer
+          push: true
+          tags: |
+            ghcr.io/dirty-cache/shadowlab/deployer:latest
+            ghcr.io/dirty-cache/shadowlab/deployer:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/dirty-cache/shadowlab
+            org.opencontainers.image.description=Shadow Lab Deployer
