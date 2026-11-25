@@ -1,0 +1,21 @@
+#!/bin/bash
+# ===========================================================================
+# Title       : Install Postgres 18 on Rocky Linux
+# Description : 
+# Author      : Bart Sjerps <bart@dirty-cache.com>
+# Date        : 2026-08-06
+# ---------------------------------------------------------------------------
+
+die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
+
+dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+dnf config-manager --set-disabled pgdg14
+dnf config-manager --set-disabled pgdg15
+dnf config-manager --set-disabled pgdg16
+dnf config-manager --set-disabled pgdg17
+dnf install postgresql18-server
+dnf install postgresql18-contrib
+
+firewall-cmd --add-service=postgresql --permanent
+firewall-cmd --reload
+firewall-cmd --list-all
