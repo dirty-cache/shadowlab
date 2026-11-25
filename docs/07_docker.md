@@ -60,9 +60,9 @@ Homepage is now running on the host, port 80: [Homepage](http://192.168.70.2:80)
 
 ### Install Deployer
 
-Deployer is a web UI that registers the compose stacks in this repo as
-Dockhand git stacks and deploys them through Dockhand. It does not use the
-local Docker socket.
+Deployer is a web UI that reads compose projects from a local `docker/`
+folder and deploys them through Dockhand. It does not use the local Docker
+socket and it does not contact anything except Dockhand.
 
 The deployer source lives in its own repo, checked out at
 `/home/bart/fdelab/deployer` (`ssh://git@forgejo.lan/homelab/deployer.git`).
@@ -72,9 +72,11 @@ and compose pulls `ghcr.io/dirty-cache/shadowlab/deployer`. The host that
 runs it does not build the image and does not need a checkout to update it
 (`docker compose pull`). Log in to `ghcr.io` first when the package is private.
 
-Copy `.env.example` from the deployer repo to `.env` on the host and set
-`DOCKHAND_URL`, `DOCKHAND_TOKEN`, and `GITHUB_TOKEN`. Give Dockhand a git
-credential that can clone this repo and put its id in `GIT_CREDENTIAL_ID`.
+Copy `.env.example` from the deployer repo to `.env` on the host.
+`DOCKHAND_URL` and `DOCKHAND_TOKEN` are optional there: they are copied into
+the deployer's SQLite database the first time it starts, and after that they
+are changed on the Settings page. Put the compose projects in `docker/` next
+to the compose file (mounted into the container).
 
 Run:
 ```
@@ -85,6 +87,6 @@ docker compose up -d
 
 Deployer is now running on the host, port 8080: [Deployer](http://192.168.70.78:8080)
 
-Choose a Dockhand environment in the sidebar. Deploy registers the stack
-with source tracking (`docker/<name>/compose.yaml` on `master`) and asks
-Dockhand to deploy it. The `dockhand` stack itself is not offered for deploy.
+Choose a Dockhand environment in the sidebar. Deploy sends
+`docker/<name>/compose.yaml` to Dockhand. The image named in that file is
+pulled by Docker. The `dockhand` stack itself is not offered for deploy.
