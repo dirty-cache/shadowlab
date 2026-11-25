@@ -64,14 +64,15 @@ Deployer is a web UI that registers the compose stacks in this repo as
 Dockhand git stacks and deploys them through Dockhand. It does not use the
 local Docker socket.
 
-The image is published to the repo packages
+The deployer source lives in its own repo, checked out at
+`/home/bart/fdelab/deployer` (`ssh://git@forgejo.lan/homelab/deployer.git`).
+The image is still published to the shadowlab packages
 ([shadowlab packages](https://github.com/dirty-cache/shadowlab/packages))
 and compose pulls `ghcr.io/dirty-cache/shadowlab/deployer`. The host that
-runs it does not build the image and does not need a checkout of this repo
-to update it (`docker compose pull`). Log in to `ghcr.io` first when the
-package is private.
+runs it does not build the image and does not need a checkout to update it
+(`docker compose pull`). Log in to `ghcr.io` first when the package is private.
 
-Copy `docker/deployer/.env.example` to `.env` on the host and set
+Copy `.env.example` from the deployer repo to `.env` on the host and set
 `DOCKHAND_URL`, `DOCKHAND_TOKEN`, and `GITHUB_TOKEN`. Give Dockhand a git
 credential that can clone this repo and put its id in `GIT_CREDENTIAL_ID`.
 
