@@ -5,6 +5,12 @@ services:
     restart: unless-stopped
     environment:
       TZ: "Europe/Amsterdam"
+      DB_POSTGRES_HOST: 'postgres.shadowlab.lan'
+      DB_POSTGRES_PORT: '5432'
+      DB_POSTGRES_USER: 'npm'
+      DB_POSTGRES_PASSWORD: 'npm'
+      DB_POSTGRES_NAME: 'npm'
+      DISABLE_IPV6: 'true'
     ports:
       - '80:80'
       - '81:81'

@@ -6,7 +6,7 @@ services:
     ports:
       - 3001:3000
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgres://dockhand:dockhand@postgres.shadowlab.lan:5432/dockhand
       DISABLE_LOCAL_LOGIN: ${DISABLE_LOCAL_LOGIN:-false}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

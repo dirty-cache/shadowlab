@@ -13,9 +13,12 @@ dnf config-manager --set-disabled pgdg14
 dnf config-manager --set-disabled pgdg15
 dnf config-manager --set-disabled pgdg16
 dnf config-manager --set-disabled pgdg17
-dnf install postgresql18-server
-dnf install postgresql18-contrib
+dnf install -y postgresql18-server postgresql18-contrib
 
 firewall-cmd --add-service=postgresql --permanent
 firewall-cmd --reload
 firewall-cmd --list-all
+
+runuser -l postgres -c /usr/pgsql-18/bin/initdb
+
+systemctl enable --now postgresql-18
