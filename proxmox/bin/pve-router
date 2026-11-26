@@ -98,7 +98,7 @@ cleanup() {
 
 while getopts ":h:n:f" OPT; do
   case "$OPT" in
-  f)   SCSI0="${DISK_STORAGE}:8" \
+  f)   SCSI0="${DISK_STORAGE}:8" ;;
   n)   NAME=$OPTARG ;;
  \?|h) usage ; exit 0 ;;
   esac
