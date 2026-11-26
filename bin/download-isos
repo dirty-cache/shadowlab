@@ -10,7 +10,7 @@ die() { echo "$(basename $0): [die] $@" >&2 ; exit 1 ; }
 gitdir=$(git rev-parse --show-toplevel)
 set -e
 
-URL_PROXMOX=https://enterprise.proxmox.com/iso/proxmox-ve_9.2-1.iso
+URL_PROXMOX=https://enterprise.proxmox.com/iso/proxmox-ve_9.3-1.iso
 URL_OPNSENSE=https://pkg.opnsense.org/releases/26.7/OPNsense-26.7-dvd-amd64.iso.bz2
 URL_ROCKY=https://download.rockylinux.org/pub/rocky/9/isos/x86_64/Rocky-9.9-x86_64-minimal.iso
 
