@@ -19,6 +19,7 @@ services:
       - data:/data
       - le:/etc/letsencrypt
 
+    # refresh: docker exec npm /app/scripts/regenerate-config -y
 volumes:
     le:
     data:

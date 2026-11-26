@@ -1,3 +1,3 @@
-create user npm with encrypted password 'npm';
-create database npm;
-alter database npm owner to npm;
+CREATE USER npm WITH ENCRYPTED PASSWORD 'npm';
+CREATE DATABASE npm;
+ALTER DATABASE npm OWNER TO npm;
