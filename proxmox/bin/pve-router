@@ -23,6 +23,7 @@ Usage: $(basename "$0") [-n name] {create|destroy|install|update|configure|clean
 Create and set up an OPNsense router VM on this Proxmox host.
 
 Options:
+  -f          Fresh (no template disk, just OPNsense)
   -n name     VM name (default: router)
   -h          Show this help
 

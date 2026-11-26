@@ -8,7 +8,9 @@ cd $gitdir
 tmpdir=$(mktemp -d /tmp/script.XXXXXX)
 trap 'rm -rf -- "$tmpdir"' EXIT
 
+src=$gitdir/opnsense/"$1".xml
+
 mkdir $tmpdir/conf
-test -f $gitdir/config/opnsense/router-basic.xml && cp $gitdir/config/opnsense/router-basic.xml $tmpdir/conf/config.xml
+cp "$src" $tmpdir/conf/config.xml || die "Copy config $src failed"
 
 genisoimage -allow-lowercase -o iso/router.iso $tmpdir
