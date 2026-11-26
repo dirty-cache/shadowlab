@@ -10,7 +10,7 @@ services:
       - icons:/app/public/icons
       - /var/run/docker.sock:/var/run/docker.sock:ro # (optional) For docker integrations
     environment:
-      HOMEPAGE_ALLOWED_HOSTS: "homepage.admin.shadowlab.lan,homepage.shadowlab.lan,192.168.70.2,homepage.shadow.lab"
+      HOMEPAGE_ALLOWED_HOSTS: "homepage.shadowlab.lan,192.168.70.12:3002,homepage.shadow.lab"
       HOMEPAGE_VAR_NAME: "Management"
 
 volumes:

@@ -14,6 +14,7 @@ DISK_STORAGE=local-lvm
 LAN=vmbr0
 WAN=vmbr1
 ISO=OPNsense-26.7-dvd-amd64.iso
+SCSI0="${DISK_STORAGE}:import-from=local:import/router.qcow2"
 
 usage() {
     cat <<EOF
@@ -51,7 +52,7 @@ create() {
     --cores 1 \
     --memory 1024 \
     --scsihw virtio-scsi-single \
-    --scsi0 "${DISK_STORAGE}:0,import-from=local:import/basic.qcow2" \
+    --scsi0 "${SCSI0}" \
     --ide2 "none,media=cdrom" \
     --boot "order=scsi0" \
     --net0 "virtio,bridge=${LAN}" \
@@ -95,8 +96,9 @@ cleanup() {
     qm set $vmid --cores 1
 }
 
-while getopts ":h:n:" OPT; do
+while getopts ":h:n:f" OPT; do
   case "$OPT" in
+  f)   SCSI0="${DISK_STORAGE}:8" \
   n)   NAME=$OPTARG ;;
  \?|h) usage ; exit 0 ;;
   esac
